@@ -1,0 +1,6 @@
+#!/bin/env bash
+
+echo "Sourcing Vivado Settings"
+source /home/a/xilinx/Vivado/2022.1/settings64.sh
+
+export PROJ_ROOT=$(pwd)

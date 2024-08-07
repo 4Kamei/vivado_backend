@@ -1,0 +1,154 @@
+/*
+
+Xilinx Vivado v2022.1 (64-bit) [Major: 2022, Minor: 1]
+SW Build: 3526262 on Mon Apr 18 15:47:01 MDT 2022
+IP Build: 3524634 on Mon Apr 18 20:55:01 MDT 2022
+
+Process ID (PID): 2635
+License: Customer
+Mode: GUI Mode
+
+Current time: 	Sun Oct 16 12:19:31 BST 2022
+Time zone: 	Greenwich Mean Time (Europe/London)
+
+OS: Ubuntu
+OS Version: 5.15.0-50-generic
+OS Architecture: amd64
+Available processors (cores): 10
+
+Display: localhost:10.0
+Screen size: 2560x1440
+Screen resolution (DPI): 100
+Available screens: 1
+Default font: family=Dialog,name=Dialog,style=plain,size=12
+Scale size: 12
+
+Java version: 	11.0.11 64-bit
+Java home: 	/home/a/xilinx/Vivado/2022.1/tps/lnx64/jre11.0.11_9
+Java executable: 	/home/a/xilinx/Vivado/2022.1/tps/lnx64/jre11.0.11_9/bin/java
+Java arguments: 	[-Dsun.java2d.pmoffscreen=false, -Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2, -Dsun.java2d.xrender=false, -Djdk.gtk.version=2, -Dsun.java2d.uiScale.enabled=false, -Xverify:none, -Dswing.aatext=true, -XX:-UsePerfData, -Djdk.map.althashing.threshold=512, -XX:StringTableSize=4072, --add-opens=java.desktop/com.sun.awt=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.plaf.synth=ALL-UNNAMED, --add-opens=java.base/java.nio=ALL-UNNAMED, --add-opens=java.desktop/sun.swing=ALL-UNNAMED, --add-opens=java.desktop/javax.swing=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.tree=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.plaf.basic=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.plaf.synth=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.plaf.basic=ALL-UNNAMED, --add-opens=java.desktop/javax.swing=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.tree=ALL-UNNAMED, --add-opens=java.desktop/java.awt.event=ALL-UNNAMED, --add-exports=java.desktop/javax.swing.plaf.synth=ALL-UNNAMED, --add-exports=java.base/java.nio=ALL-UNNAMED, --add-exports=java.desktop/sun.swing=ALL-UNNAMED, --add-exports=java.desktop/javax.swing=ALL-UNNAMED, --add-exports=java.desktop/javax.swing.tree=ALL-UNNAMED, --add-exports=java.desktop/javax.swing.plaf.basic=ALL-UNNAMED, --add-exports=java.desktop/sun.swing=ALL-UNNAMED, --add-exports=java.desktop/sun.swing.table=ALL-UNNAMED, --add-exports=java.desktop/sun.swing.plaf.synth=ALL-UNNAMED, --add-exports=java.desktop/sun.awt.shell=ALL-UNNAMED, --add-exports=java.base/sun.security.action=ALL-UNNAMED, --add-exports=java.desktop/sun.font=ALL-UNNAMED, --add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED, -XX:NewSize=60m, -XX:MaxNewSize=60m, -Xms256m, -Xmx3072m, -Xss5m, -Xrs]
+Java initial memory (-Xms): 	256 MB
+Java maximum memory (-Xmx):	 3 GB
+
+
+User name: 	a
+User home directory: /home/a
+User working directory: /home/a/fpga_projects/vivado_backend/vivado
+User country: 	US
+User language: 	en
+User locale: 	en_US
+
+RDI_BASEROOT: /home/a/xilinx/Vivado
+HDI_APPROOT: /home/a/xilinx/Vivado/2022.1
+RDI_DATADIR: /home/a/xilinx/Vivado/2022.1/data
+RDI_BINDIR: /home/a/xilinx/Vivado/2022.1/bin
+
+Vivado preferences file: /home/a/.Xilinx/Vivado/2022.1/vivado.xml
+Vivado preferences directory: /home/a/.Xilinx/Vivado/2022.1/
+Vivado layouts directory: /home/a/.Xilinx/Vivado/2022.1/data/layouts
+PlanAhead jar file: 	/home/a/xilinx/Vivado/2022.1/lib/classes/planAhead.jar
+Vivado log file: 	/home/a/fpga_projects/vivado_backend/vivado/vivado.log
+Vivado journal file: 	/home/a/fpga_projects/vivado_backend/vivado/vivado.jou
+Engine tmp dir: 	./.Xil/Vivado-2635-a-host
+
+Xilinx Environment Variables
+----------------------------
+XILINX: /home/a/xilinx/Vivado/2022.1/ids_lite/ISE
+XILINX_DSP: /home/a/xilinx/Vivado/2022.1/ids_lite/ISE
+XILINX_HLS: /home/a/xilinx/Vitis_HLS/2022.1
+XILINX_PLANAHEAD: /home/a/xilinx/Vivado/2022.1
+XILINX_VITIS: 
+XILINX_VIVADO: /home/a/xilinx/Vivado/2022.1
+XILINX_VIVADO_HLS: /home/a/xilinx/Vivado/2022.1
+
+
+GUI allocated memory:	308 MB
+GUI max memory:		3,072 MB
+Engine allocated memory: 1,953 MB
+
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+*/
+
+// TclEventType: START_GUI
+// [GUI Memory]: 91 MB (+92465kb) [00:00:04]
+// [Engine Memory]: 1,929 MB (+1871342kb) [00:00:04]
+// Tcl Message: source vivado_startup.tcl 
+// Tcl Message: # set PROJ_ROOT $env(PROJ_ROOT) # set CONSTRAINTS_DIR ${PROJ_ROOT}/design/constraints/ # set SOURCES_DIR ${PROJ_ROOT}/design/sources/ # set TARGET_PART xc7k325tffg900-1 # set PROJ_NAME [clock format [clock seconds] -format "%Y%m%dT%H%M"] # create_project -part $TARGET_PART -force -in_memory -verbose $PROJ_NAME .   
+// Tcl Message: ls 
+// Tcl Message: set_property target_language systemverilog 
+// Tcl Message: ERROR: [Common 17-163] Missing value for option 'objects', please type 'set_property -help' for usage info. 
+// Tcl Message: set_property target_language systemverilog [current_project] 
+// Tcl Message: ERROR: [Common 17-162] Invalid option value specified for 'value'. 
+// Tcl Message: set_property target_language system_verilog [current_project] 
+// Tcl Message: ERROR: [Common 17-162] Invalid option value specified for 'value'. 
+// Tcl Message: set_property target_language sverilog [current_project] 
+// Tcl Message: ERROR: [Common 17-162] Invalid option value specified for 'value'. 
+// Tcl Message: set_property target_language sv  [current_project] 
+// Tcl Message: ERROR: [Common 17-162] Invalid option value specified for 'value'. 
+// Tcl Message: set_property target_language 
+// Tcl Message: ERROR: [Common 17-163] Missing value for option 'value', please type 'set_property -help' for usage info. 
+// Tcl Message: help set_prlo 
+// Tcl Message: ERROR: [Common 17-25] No topics matched 'set_prlo' 
+// Tcl Message: set_property -h 
+// Tcl Message: set_property target_l 
+// Tcl Message: ERROR: [Common 17-163] Missing value for option 'value', please type 'set_property -help' for usage info. 
+// Tcl Message: help *langu* 
+// Tcl Message: ERROR: [Common 17-25] No topics matched '*langu*' 
+// Tcl Message: help *lang* 
+// Tcl Message: ERROR: [Common 17-25] No topics matched '*lang*' 
+// Tcl Message: get_property target_lanugage [current_project] 
+// Tcl Message: ERROR: [Common 17-54] The object 'project' does not have a property 'target_lanugage'. 
+// Tcl Message: get_property target_language [current_project] 
+// Tcl Message: Verilog 
+// Tcl Message: set_property target_language SystemVerilog  [current_project] 
+// Tcl Message: ERROR: [Common 17-162] Invalid option value specified for 'value'. 
+// Tcl Message: set_property target_language SVerilog  [current_project] 
+// Tcl Message: ERROR: [Common 17-162] Invalid option value specified for 'value'. 
+// Tcl Message: set_property target_language System_Verilog  [current_project] 
+// Tcl Message: ERROR: [Common 17-162] Invalid option value specified for 'value'. 
+// Tcl Message: set_property target_language "System Verilog"  [current_project] 
+// Tcl Message: ERROR: [Common 17-162] Invalid option value specified for 'value'. 
+// Tcl Message: start_gui 
+selectTab((HResource) null, (HResource) null, "Tcl Console", 0); // aL
+// HMemoryUtils.trashcanNow. Engine heap size: 1,910 MB. GUI used memory: 54 MB. Current time: 10/16/22, 12:19:32 PM BST
+selectTab((HResource) null, (HResource) null, "Messages", 1); // aL
+selectMenu(PAResourceItoN.MainMenuMgr_HELP, "Help"); // aj
+dismissMenu(PAResourceItoN.MainMenuMgr_HELP, "Help"); // aj
+selectMenu(PAResourceItoN.MainMenuMgr_VIEW, "View"); // aj
+dismissMenu(PAResourceItoN.MainMenuMgr_VIEW, "View"); // aj
+selectMenu(RDIResource.MainWinMenuMgr_LAYOUT, "Layout"); // aj
+selectMenu(PAResourceItoN.MainMenuMgr_WINDOW, "Window"); // aj
+dismissMenu(PAResourceItoN.MainMenuMgr_WINDOW, "Window"); // aj
+selectMenu(PAResourceItoN.MainMenuMgr_REPORTS, "Reports"); // aj
+dismissMenu(PAResourceItoN.MainMenuMgr_REPORTS, "Reports"); // aj
+selectMenu(PAResourceItoN.MainMenuMgr_TOOLS, "Tools"); // aj
+dismissMenu(PAResourceItoN.MainMenuMgr_TOOLS, "Tools"); // aj
+selectMenu(PAResourceItoN.MainMenuMgr_FLOW, "Flow"); // aj
+dismissMenu(PAResourceItoN.MainMenuMgr_FLOW, "Flow"); // aj
+selectMenu(PAResourceItoN.MainMenuMgr_EDIT, "Edit"); // aj
+dismissMenu(PAResourceItoN.MainMenuMgr_EDIT, "Edit"); // aj
+selectMenu(PAResourceItoN.MainMenuMgr_FLOW, "Flow"); // aj
+dismissMenu(PAResourceItoN.MainMenuMgr_FLOW, "Flow"); // aj
+selectMenu(PAResourceItoN.MainMenuMgr_TOOLS, "Tools"); // aj
+selectMenu(RDIResourceCommand.RDICommands_CUSTOM_COMMANDS, "Custom Commands"); // ao
+selectMenuItem(RDIResourceCommand.RDICommands_SETTINGS, "Settings..."); // ar
+dismissMenu(PAResourceItoN.MainMenuMgr_TOOLS, "Tools"); // aj
+// Run Command: RDIResourceCommand.RDICommands_SETTINGS
+// Tcl Command: 'rdi::info_commands {device::*}'
+// Tcl Command: 'rdi::info_commands {debug::*}'
+// Tcl Command: 'rdi::info_commands {*}'
+// WARNING: HEventQueue.dispatchEvent() is taking  1125 ms.
+// WARNING: HEventQueue.dispatchEvent() is taking  1763 ms.
+selectRadioButton(PAResourceQtoS.SettingsOptionsProjectPage_VHDL_LANGUAGE, "VHDL"); // a
+selectRadioButton(PAResourceQtoS.SettingsOptionsProjectPage_VERILOG_LANGUAGE, "Verilog"); // a
+selectButton(RDIResource.BaseDialog_APPLY, "Apply"); // a
+// [GUI Memory]: 124 MB (+29839kb) [00:00:28]
+selectRadioButton(PAResourceQtoS.SettingsOptionsProjectPage_VHDL_LANGUAGE, "VHDL"); // a
+selectButton(RDIResource.BaseDialog_APPLY, "Apply"); // a
+// [GUI Memory]: 135 MB (+5317kb) [00:00:31]
+selectTab((HResource) null, (HResource) null, "Tcl Console", 0); // aL
+selectRadioButton(PAResourceQtoS.SettingsOptionsProjectPage_VERILOG_LANGUAGE, "Verilog"); // a
+selectButton(RDIResource.BaseDialog_APPLY, "Apply"); // a
+selectTree(PAResourceQtoS.SettingsDialog_OPTIONS_TREE, "[optionsRoot, Display]", 4, false); // B
+selectButton(RDIResource.BaseDialog_CANCEL, "Cancel"); // a

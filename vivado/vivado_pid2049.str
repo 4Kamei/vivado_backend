@@ -1,0 +1,95 @@
+/*
+
+Xilinx Vivado v2022.1 (64-bit) [Major: 2022, Minor: 1]
+SW Build: 3526262 on Mon Apr 18 15:47:01 MDT 2022
+IP Build: 3524634 on Mon Apr 18 20:55:01 MDT 2022
+
+Process ID (PID): 2049
+License: Customer
+Mode: GUI Mode
+
+Current time: 	Sun Oct 16 12:11:54 BST 2022
+Time zone: 	Greenwich Mean Time (Europe/London)
+
+OS: Ubuntu
+OS Version: 5.15.0-50-generic
+OS Architecture: amd64
+Available processors (cores): 10
+
+Display: localhost:10.0
+Screen size: 2560x1440
+Screen resolution (DPI): 100
+Available screens: 1
+Default font: family=Dialog,name=Dialog,style=plain,size=12
+Scale size: 12
+
+Java version: 	11.0.11 64-bit
+Java home: 	/home/a/xilinx/Vivado/2022.1/tps/lnx64/jre11.0.11_9
+Java executable: 	/home/a/xilinx/Vivado/2022.1/tps/lnx64/jre11.0.11_9/bin/java
+Java arguments: 	[-Dsun.java2d.pmoffscreen=false, -Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2, -Dsun.java2d.xrender=false, -Djdk.gtk.version=2, -Dsun.java2d.uiScale.enabled=false, -Xverify:none, -Dswing.aatext=true, -XX:-UsePerfData, -Djdk.map.althashing.threshold=512, -XX:StringTableSize=4072, --add-opens=java.desktop/com.sun.awt=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.plaf.synth=ALL-UNNAMED, --add-opens=java.base/java.nio=ALL-UNNAMED, --add-opens=java.desktop/sun.swing=ALL-UNNAMED, --add-opens=java.desktop/javax.swing=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.tree=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.plaf.basic=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.plaf.synth=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.plaf.basic=ALL-UNNAMED, --add-opens=java.desktop/javax.swing=ALL-UNNAMED, --add-opens=java.desktop/javax.swing.tree=ALL-UNNAMED, --add-opens=java.desktop/java.awt.event=ALL-UNNAMED, --add-exports=java.desktop/javax.swing.plaf.synth=ALL-UNNAMED, --add-exports=java.base/java.nio=ALL-UNNAMED, --add-exports=java.desktop/sun.swing=ALL-UNNAMED, --add-exports=java.desktop/javax.swing=ALL-UNNAMED, --add-exports=java.desktop/javax.swing.tree=ALL-UNNAMED, --add-exports=java.desktop/javax.swing.plaf.basic=ALL-UNNAMED, --add-exports=java.desktop/sun.swing=ALL-UNNAMED, --add-exports=java.desktop/sun.swing.table=ALL-UNNAMED, --add-exports=java.desktop/sun.swing.plaf.synth=ALL-UNNAMED, --add-exports=java.desktop/sun.awt.shell=ALL-UNNAMED, --add-exports=java.base/sun.security.action=ALL-UNNAMED, --add-exports=java.desktop/sun.font=ALL-UNNAMED, --add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED, -XX:NewSize=60m, -XX:MaxNewSize=60m, -Xms256m, -Xmx3072m, -Xss5m, -Xrs]
+Java initial memory (-Xms): 	256 MB
+Java maximum memory (-Xmx):	 3 GB
+
+
+User name: 	a
+User home directory: /home/a
+User working directory: /home/a/fpga_projects/vivado_backend/vivado
+User country: 	US
+User language: 	en
+User locale: 	en_US
+
+RDI_BASEROOT: /home/a/xilinx/Vivado
+HDI_APPROOT: /home/a/xilinx/Vivado/2022.1
+RDI_DATADIR: /home/a/xilinx/Vivado/2022.1/data
+RDI_BINDIR: /home/a/xilinx/Vivado/2022.1/bin
+
+Vivado preferences file: /home/a/.Xilinx/Vivado/2022.1/vivado.xml
+Vivado preferences directory: /home/a/.Xilinx/Vivado/2022.1/
+Vivado layouts directory: /home/a/.Xilinx/Vivado/2022.1/data/layouts
+PlanAhead jar file: 	/home/a/xilinx/Vivado/2022.1/lib/classes/planAhead.jar
+Vivado log file: 	/home/a/fpga_projects/vivado_backend/vivado/vivado.log
+Vivado journal file: 	/home/a/fpga_projects/vivado_backend/vivado/vivado.jou
+Engine tmp dir: 	./.Xil/Vivado-2049-a-host
+
+Xilinx Environment Variables
+----------------------------
+XILINX: /home/a/xilinx/Vivado/2022.1/ids_lite/ISE
+XILINX_DSP: /home/a/xilinx/Vivado/2022.1/ids_lite/ISE
+XILINX_HLS: /home/a/xilinx/Vitis_HLS/2022.1
+XILINX_PLANAHEAD: /home/a/xilinx/Vivado/2022.1
+XILINX_VITIS: 
+XILINX_VIVADO: /home/a/xilinx/Vivado/2022.1
+XILINX_VIVADO_HLS: /home/a/xilinx/Vivado/2022.1
+
+
+GUI allocated memory:	308 MB
+GUI max memory:		3,072 MB
+Engine allocated memory: 1,924 MB
+
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+*/
+
+// TclEventType: START_GUI
+// [GUI Memory]: 63 MB (+63297kb) [00:00:04]
+// [Engine Memory]: 1,851 MB (+1789917kb) [00:00:04]
+// Tcl Message: source vivado_startup.tcl 
+// Tcl Message: # set PROJ_ROOT $env(PROJ_ROOT) # set CONSTRAINTS_DIR ${PROJ_ROOT}/design/constraints/ # set SOURCES_DIR ${PROJ_ROOT}/design/sources/ # set TARGET_PART xc7k325tffg900-1 # set PROJ_NAME [clock format [clock seconds] -format "%Y%m%dT%H%M"] # create_project -part $TARGET_PART -force -in_memory -verbose $PROJ_NAME .   
+// Tcl Message: start_gui 
+// [GUI Memory]: 120 MB (+57136kb) [00:00:06]
+// HMemoryUtils.trashcanNow. Engine heap size: 1,875 MB. GUI used memory: 56 MB. Current time: 10/16/22, 12:11:55 PM BST
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Constraints, constrs_1]", 2, false, false, false, false, true, false); // D - Popup Trigger
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Constraints]", 1, true, false, false, false, true, false); // D - Popup Trigger - Node
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Constraints, constrs_1]", 2, false, false, false, false, true, false); // D - Popup Trigger
+selectTree(PAResourceEtoH.FileSetPanel_FILE_SET_PANEL_TREE, "[root, Constraints, constrs_1]", 2, false, false, false, false, true, false); // D - Popup Trigger
+// Elapsed time: 13 seconds
+selectTree(PAResourceItoN.MsgTreePanel_MESSAGE_VIEW_TREE, "[, Vivado Commands, General Messages, [Board 49-26] cannot add Board Part xilinx.com:vck190:part0:2.2 available at /home/a/xilinx/Vivado/2022.1/data/xhub/boards/XilinxBoardStore/boards/Xilinx/vck190/production/2.2/board.xml as part xcvc1902-vsva2197-2mp-e-s specified in board_part file is either invalid or not available. ]", 2, true, false, false, false, true, false); // ah - Popup Trigger - Node
+selectTab(RDIResource.PropertiesView_TABBED_PANE, (HResource) null, "General", 1); // i
+selectTab(RDIResource.PropertiesView_TABBED_PANE, (HResource) null, "General", 0); // i
+selectTab(PAResourceEtoH.FileSetView_TABBED_PANE, (HResource) null, "Libraries", 2); // i
+selectTab(PAResourceEtoH.FileSetView_TABBED_PANE, "SourcesView", (HResource) null, "Libraries", 2, true, false); // i - Popup Trigger
+selectTab(PAResourceEtoH.FileSetView_TABBED_PANE, (HResource) null, "Libraries", 1); // i
+selectTab((HResource) null, (HResource) null, "Tcl Console", 0); // aL
+// Elapsed time: 29 seconds
+selectButton(RDIResourceCommand.RDICommands_UNSELECT_ALL, "unselect_all"); // D
+// Run Command: RDIResourceCommand.RDICommands_UNSELECT_ALL
