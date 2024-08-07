@@ -1,6 +1,7 @@
+#Vivado stuff
 *.log
 *.jou
 .Xil/*
-
 *.wpc
 *.lpr
+*.str
