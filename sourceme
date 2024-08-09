@@ -1,5 +1,6 @@
 #!/bin/env bash
 
+#FIXME check if exits, and only then setup vivado
 echo "Sourcing Vivado Settings"
 source /home/a/xilinx/Vivado/2022.1/settings64.sh
 
