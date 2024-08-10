@@ -20,4 +20,9 @@ in pkgs.mkShell {
     cmake
   ];
 
+  shellHook = ''
+    echo "Sourcing sourceme"
+    source sourceme
+  '';
+
 }
