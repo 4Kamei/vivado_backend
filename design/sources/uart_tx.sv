@@ -31,16 +31,10 @@ module uart_tx #(
     localparam TRANSMIT_PATTERN_LEN = NUM_STOP_BIT + DATA_LEN + 1;
 
     logic [11:0] transmit_pattern;
-    always_comb transmit_pattern = {1'b0, {i_tx_data}, {NUM_STOP_BIT{1'b1}}};
+    always_comb transmit_pattern = {{NUM_STOP_BIT{1'b1}}, {i_tx_data}, 1'b0};
     logic [11:0] transmit_pattern_q;
-    wire  [11:0] transmit_pattern_rev;
     logic transmitting;
 
-    generate
-        for (genvar n = 0 ; n < TRANSMIT_PATTERN_LEN; n = n + 1) begin
-            always_comb transmit_pattern_rev[n] = transmit_pattern_q[TRANSMIT_PATTERN_LEN - 1 - n]; // Reverse video data buss bit order 
-        end
-    endgenerate
 
     //Transmit state and setup
     always @(posedge i_clk or negedge i_rst_n) begin
@@ -63,7 +57,7 @@ module uart_tx #(
     
     logic [3:0] output_pattern_index;
     always @(posedge i_clk or negedge i_rst_n) begin
-        if (!i_rst_n) begin
+        if (!i_rst_n || !transmitting) begin
            output_pattern_index <= 4'b0000;
         end else begin
             if (transmitting && uart_tx_clk_enable && output_pattern_index < TRANSMIT_PATTERN_LEN - 1) begin
@@ -90,7 +84,7 @@ module uart_tx #(
         end
     end
     
-    assign o_uart_tx = transmit_pattern_rev[output_pattern_index];
+    assign o_uart_tx = transmit_pattern_q[output_pattern_index];
     assign o_uart_busy = transmitting;
 
 endmodule // uart_tx
