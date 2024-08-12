@@ -1,18 +1,19 @@
 `timescale 1ns/1ps
+
 `default_nettype none
 
 module uart_tx #(
         parameter CLOCK_FREQUENCY = 12_000_000,
         parameter BAUD_RATE = 115200
     ) (
-        input logic i_clk,
-        input logic i_rst_n,
+        input wire i_clk,
+        input wire i_rst_n,
         
-        input logic i_tx_en,
-        input logic [7:0] i_tx_data,
+        input wire i_tx_en,
+        input wire [7:0] i_tx_data,
 
-        output logic o_uart_tx,
-        output logic o_uart_busy
+        output wire o_uart_tx,
+        output wire o_uart_busy
     );
 
     //TODO can rewrite without the weird indexing into an array, but with

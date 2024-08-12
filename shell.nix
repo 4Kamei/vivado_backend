@@ -16,6 +16,7 @@ in pkgs.mkShell {
     python311Packages.cocotb
     python311Packages.pyzmq
     python311Packages.pytest
+    python311Packages.pyserial
 
     cmake
   ];
