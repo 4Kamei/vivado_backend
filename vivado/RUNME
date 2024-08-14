@@ -1,3 +1,10 @@
 #!/bin/env bash
 
-vivado -source vivado_startup.tcl -log vivado.log -mode tcl
+#Cleanup
+rm *.log
+rm *.jou
+rm *.str
+
+mkdir -p reports
+
+vivado -source vivado_startup.tcl -log vivado_raw.log -mode tcl | tee vivado.log

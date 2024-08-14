@@ -2,8 +2,8 @@
 `default_nettype none
 
 module uart_rx
-    #(   parameter CLOCK_FREQUENCY = 10_000_00,
-         parameter BAUD_RATE = 12_000,
+    #(   parameter CLOCK_FREQUENCY = 10_000_000,
+         parameter BAUD_RATE = 115200,
          parameter PARITY_BIT = 0
      )(
         input wire i_clk,
@@ -52,8 +52,6 @@ module uart_rx
             if (edge_strobe & !receive_state) begin
                 receive_state <= 1'b1;
                 has_bits <= 1'b1;
-                uart_clk_div_counter <= (CLOCKS_PER_BAUD + CLOCKS_PER_BAUD/2);
-                byte_counter <= 4'b1111;
             end
             if (receive_state & byte_counter == 4'b1000) begin
                 if (has_bits) begin
@@ -62,7 +60,6 @@ module uart_rx
                     receive_state <= 0;                
                     o_rx_en <= 1'b1;
                 end
-                byte_counter <= 4'b1000;
             end
         end
     end
@@ -77,6 +74,10 @@ module uart_rx
             //Reset nothing in this block, but needs to have a reset to
             //prevent tools from 
         end else begin
+            if (edge_strobe & !receive_state) begin    
+                uart_clk_div_counter <= (CLOCKS_PER_BAUD + CLOCKS_PER_BAUD/2);
+                byte_counter <= 4'b1111;
+            end
             uart_clk_strobe <= 0;
             if (receive_state) begin
                 if (uart_clk_div_counter == 0) begin

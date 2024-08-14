@@ -3,7 +3,7 @@
 `default_nettype none
 
 module uart_tx #(
-        parameter CLOCK_FREQUENCY = 12_000_000,
+        parameter CLOCK_FREQUENCY = 200_000_000,
         parameter BAUD_RATE = 115200
     ) (
         input wire i_clk,
@@ -31,9 +31,9 @@ module uart_tx #(
 
     localparam TRANSMIT_PATTERN_LEN = NUM_STOP_BIT + DATA_LEN + 1;
 
-    logic [11:0] transmit_pattern;
+    logic [TRANSMIT_PATTERN_LEN-1:0] transmit_pattern;
     always_comb transmit_pattern = {{NUM_STOP_BIT{1'b1}}, {i_tx_data}, 1'b0};
-    logic [11:0] transmit_pattern_q;
+    logic [TRANSMIT_PATTERN_LEN-1:0] transmit_pattern_q;
     logic transmitting;
 
 
@@ -43,7 +43,6 @@ module uart_tx #(
             //If reset, we reset the 'output_pattern_index' to 0, which
             //indexes into the msb of this -> Idle UART state is 1 hence leave
             //the reset value
-            transmit_pattern_q <= {1'b1, {DATA_LEN{1'b0}}, {NUM_STOP_BIT{1'b1}}};
             transmitting <= 1'b0;
         end else begin
             if (i_tx_en && !transmitting) begin
@@ -85,7 +84,8 @@ module uart_tx #(
         end
     end
     
-    assign o_uart_tx = transmit_pattern_q[output_pattern_index];
+    //If we're not transmitting, o_uart_tx is always idle as 1
+    assign o_uart_tx = !transmitting | transmit_pattern_q[output_pattern_index];
     assign o_uart_busy = transmitting;
 
 endmodule // uart_tx
