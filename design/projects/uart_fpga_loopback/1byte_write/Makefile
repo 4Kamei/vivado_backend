@@ -2,7 +2,7 @@ TOPLEVEL = uart_fpga_loopback
 
 TOPLEVEL_LANG = verilog
 VERILOG_SOURCES = ${PROJ_ROOT}/design/sources/*.sv
-VERILOG_SOURCES += ${PROJ_ROOT}/design/projects/*.sv
+VERILOG_SOURCES += ${PROJ_ROOT}/design/projects/${TOPLEVEL}/*.sv
 VERILOG_SOURCES += ${PROJ_ROOT}/design/primitives/*.sv
 MODULE = ${TOPLEVEL}
 SIM = verilator
