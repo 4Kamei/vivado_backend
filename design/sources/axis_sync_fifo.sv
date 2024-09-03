@@ -11,10 +11,8 @@ module axis_sync_fifo #(
         parameter AXIS_FIFO_DEPTH = 4
     ) (
         input wire i_clk,
-        input wire i_uart_rx,
         input wire i_rst_n,
 
-    
         //Master interface, out of the fifo
         output wire                         o_m_axis_tvalid,
         input  wire                         i_m_axis_tready,
@@ -115,9 +113,7 @@ module axis_sync_fifo #(
 
     logic o_m_axis_tvalid_q;
     assign o_m_axis_tvalid = o_m_axis_tvalid_q;
-    
-    logic i_m_axis_tready_q;
-    
+     
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
             o_m_axis_tvalid_q <= 1'b0;
