@@ -6,6 +6,12 @@ results.xml
 *.fst
 
 #Vivado stuff
+vivado/*.v
+vivado/*.bit
+vivado/*.ltx
+vivado/reports
+vivado/.Xil
+coverage.dat
 *.log
 *.jou
 .Xil/*
