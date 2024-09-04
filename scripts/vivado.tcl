@@ -14,7 +14,9 @@ proc rglob { dirpath patterns {exclude_pats {}} } {
 #and to only default to programming if ONLY one device is present
 proc program_device { file } {
     open_hw_manager
-    connect_hw_server
+    if { [current_hw_server] == ""} {
+        connect_hw_server
+    }
     refresh_hw_server ;# may need to plug in USB again or something like that
     open_hw_target
     set device [lindex [get_hw_devices] 0]
