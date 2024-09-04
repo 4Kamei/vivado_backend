@@ -81,7 +81,7 @@ module axis_sync_fifo #(
     //     .RAM_MODE("TDP"),
     //     axis_sync_fifo_memory ( );
   
-    logic [AXIS_FIFO_DEPTH-1:0] [FIFO_INPUT_WIDTH-1:0] memory;
+    logic [FIFO_INPUT_WIDTH-1:0] memory [AXIS_FIFO_DEPTH-1:0];
     
     logic [FIFO_INPUT_WIDTH-1:0] memory_read_data;
     logic [FIFO_INPUT_WIDTH-1:0] memory_write_data_q;
@@ -237,7 +237,7 @@ module axis_sync_fifo #(
     end
 
     always_comb empty = fifo_read_ptr == fifo_write_ptr;
-    always_comb full = (fifo_write_ptr + 2'b10 == fifo_read_ptr | fifo_write_ptr + 1'b1 == fifo_read_ptr);
+    always_comb full = (fifo_write_ptr + 2 == fifo_read_ptr | fifo_write_ptr + 1 == fifo_read_ptr);
     
     assign o_s_axis_tready = !full & i_rst_n;
 
