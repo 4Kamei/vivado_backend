@@ -3,7 +3,7 @@
 #Setup project constants
 
 set PROJ_ROOT $env(PROJ_ROOT)
-set PROJ_NAME "uart_fpga_loopback"
+set PROJ_NAME "uart_fpga_axis_loopback"
 set SOURCES_DIR ${PROJ_ROOT}/design/sources/
 set PROJ_SOURCES_DIR ${PROJ_ROOT}/design/projects/${PROJ_NAME}
 set CONSTRAINTS_DIR ${PROJ_ROOT}/design/projects/${PROJ_NAME}
