@@ -47,7 +47,7 @@ async def master_throttled_random(dut):
     write_data = Queue()
 
     async def sender():
-        for k in range(1000):
+        for k in range(10000):
             rand_len = random.randint(1, 10)
             s = bytearray([random.randint(0, 255) for _ in range(rand_len)])
             #TODO finish the fifo + write a uart TX + do a loopback test
