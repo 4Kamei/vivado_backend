@@ -41,3 +41,42 @@ set_property IOSTANDARD LVCMOS25 [get_ports i_uart_rx]
 set_property PACKAGE_PIN AK26 [get_ports o_uart_tx]
 set_property IOSTANDARD LVCMOS25 [get_ports o_uart_tx]
 
+
+#Extra Configuration
+if {0} {
+    #Si5883P configuration. 4 Clocks provided. Driven by 50Mhz Reference
+    #Slave Address: 1110000  7'h70. Transmitted MSB First 
+    #I2C Wants LVCMOS25 as well, but only for pull down -> Can disable pull up behaviour in there somehow, maybe?
+    #I2C Has tristate on both SCL and SDA
+    #Clocking:
+    #   0 => 0 on tristate buffer
+    #   1 => Z on tristate buffer
+    #Writing:
+    #   0 => 0 on tristate
+    #   1 => Z on tristate
+    #Reading:
+    #   1 on tristate => 1
+    #   0 on tristate => 0
+    PLL_SCL P23
+    PLL_SDA N25 
+
+    #Also connected
+
+    CLK0_P F20      ;# BANK 11 
+    CLK0_N E20      ;#   DDR3
+    CLK1_P C8       ;# BANK 118
+    CLK1_N C7       ;#  40G GTX
+    CLK2_P G8       ;# BANK 117
+    CLK2_N G7       ;#  10G GTX
+    CLK3_P L8       ;# BANK 17
+    CLK3_N L7       ;#   PCIe
+
+
+
+
+
+
+
+}
+
+
