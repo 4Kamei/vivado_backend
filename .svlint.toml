@@ -1,0 +1,58 @@
+[textrules]
+style_directives = true
+style_semicolon = true
+
+[syntaxrules]
+blocking_assignment_in_always_at_edge = true
+blocking_assignment_in_always_ff = true
+blocking_assignment_in_always_latch = true
+case_default = true
+default_nettype_none = true
+#Good practice
+enum_with_type = true
+eventlist_comma_always_ff = true
+#If using case with enum, default should be $error("Unreachable") to catch
+#Enum elements being added accidentally
+explicit_case_default = true
+
+function_same_as_system_function = true
+general_always_no_edge = true
+
+#TODO not working
+
+    #operator_case_equality = true
+    #package_identifier_matches_filename = true
+
+    #TODO this seems nice
+    #re_required_instance = true
+    #option.re_required_instance = "^.*_u$"
+
+    #module_identifier_matches_filename = true
+
+non_blocking_assignment_in_always_comb = true
+non_blocking_assignment_in_always_no_edge = true
+
+#one of these two
+genvar_declaration_in_loop = true
+genvar_declaration_out_loop = false
+
+keyword_forbidden_always = true
+
+keyword_required_generate = true
+localparam_explicit_type = true
+loop_variable_declaration = true
+multiline_for_begin = true
+multiline_if_begin = true
+
+
+parameter_default_value = true
+parameter_in_generate = true
+procedural_continuous_assignment = true
+sequential_block_in_always_comb = true
+
+prefix_inout = true
+prefix_input = true
+prefix_output = true
+
+style_keyword_datatype = false
+style_commaleading = false
