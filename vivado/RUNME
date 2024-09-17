@@ -7,4 +7,6 @@ rm *.str
 
 mkdir -p reports
 
-vivado -source vivado_startup.tcl -log vivado_raw.log -mode tcl | tee vivado.log
+vivado -source vivado_startup.tcl -mode tcl | tee vivado.log
+
+

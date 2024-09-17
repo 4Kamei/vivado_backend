@@ -1,0 +1,7 @@
++====================+===================+===================================================================+
+| Launch Setup Clock | Launch Hold Clock | Pin                                                               |
++====================+===================+===================================================================+
+| i_sys_clk_p        | i_sys_clk_p       | clock_counter_ad_u/axis_debug_decoder_u/pkt_parser_state_reg[2]/D |
+| i_sys_clk_p        | i_sys_clk_p       | clock_counter_ad_u/axis_debug_decoder_u/pkt_parser_state_reg[0]/D |
+| i_sys_clk_p        | i_sys_clk_p       | clock_counter_ad_u/axis_debug_decoder_u/start_packet_parser_reg/D |
++--------------------+-------------------+-------------------------------------------------------------------+

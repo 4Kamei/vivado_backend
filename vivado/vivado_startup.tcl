@@ -3,11 +3,11 @@
 #Setup project constants
 
 set PROJ_ROOT $env(PROJ_ROOT)
-set PROJ_NAME "uart_fpga_axis_loopback"
+set PROJ_NAME "eth_10g_pkt_receive"
 set SOURCES_DIR ${PROJ_ROOT}/design/sources/
 set PROJ_SOURCES_DIR ${PROJ_ROOT}/design/projects/${PROJ_NAME}
-set CONSTRAINTS_DIR ${PROJ_ROOT}/design/projects/${PROJ_NAME}
-set TARGET_PART xc7k325tffg900-1
+set CONSTRAINTS_DIR ${PROJ_ROOT}/design/projects/${PROJ_NAME}/constraints
+set TARGET_PART xc7k325tiffg900-2L						;# Speed Grade: 2, Temperature Class: Industrial
 set REPORT_DIR "reports"
 
 #Source the scripts
@@ -23,15 +23,20 @@ read_verilog [ rglob ${SOURCES_DIR} *.sv] -sv -verbose
 read_verilog [ rglob ${PROJ_SOURCES_DIR} *.sv] -sv -verbose
 
 #Constraints with '.tcl' are unmanaged and what we want, '.xdc' are managed by the tool
-#allowing only a subset of tcl syntax. Hence use -unmanaged
-read_xdc [ rglob ${CONSTRAINTS_DIR} *.tcl ] -unmanaged -verbose
+#allowing only a subset of tcl syntax. Hence use -unmanaged. This loads the main XDC
+read_xdc $PROJ_SOURCES_DIR/${PROJ_NAME}.tcl -unmanaged -verbose
 
-synth_design -top $PROJ_NAME -part $TARGET_PART
+#We don't want to flatten the hierarchy at this point, so that we can set attributes with tcl scripts
+synth_design -top $PROJ_NAME -part $TARGET_PART -flatten_hierarchy none
+
+#These are specific timing constraints that we want to set on the synth'd but not yet flattened design. E.g. resyncs
+foreach constraint_file [ rglob ${CONSTRAINTS_DIR} *.tcl ] {
+    source $constraint_file
+}
 
 write_checkpoint -force ${REPORT_DIR}/post_synth.dcp
 report_timing_summary -file ${REPORT_DIR}/post_synth_timing_summary.rpt
 report_utilization -file ${REPORT_DIR}/post_synth_util.rpt
-
 
 opt_design
 place_design

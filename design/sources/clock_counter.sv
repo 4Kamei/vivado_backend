@@ -1,19 +1,9 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
-//Exposes 2 64 bit registers
-//  0:  w   '1'. Self clearing. Latches the current counter values, then
-//               resets the counters
-//  1:  r   Local clock counter 
-//  2:  r   Other clock counter
-
-//  Protocol for getting out counter values:
-//              write 0 1
-//  LOCAL     = read  1         
-//  EXTRERNAL = read  2
-//
-//  EXTERNAL_FREQUENCY = (LOCAL_FREQUENCY) * EXTERNAL / LOCAL
-
+//  counters are latchend and reset on i_latch_counters
+//  counters presented are valid if o_counter_valid
+//  EXTERNAL_FREQUENCY = (LOCAL_FREQUENCY) * EXTERNAL_COUNTER / LOCAL_COUNTER
 module clock_counter #(
         //Devices are uniquely defined by AXI_BUS_TYPE_ID and
         //AXI_BUS_DEVICE_ID
@@ -32,10 +22,7 @@ module clock_counter #(
         output wire [CLOCK_COUNTER_WIDTH-1:0] o_clk_local_counter,
         output wire [CLOCK_COUNTER_WIDTH-1:0] o_clk_extern_counter
     );
-    //Signals are suffixed with 'loc' or 'extern', depending on the domain  
-    localparam AXI_BUS_TYPE_ID = 8'h00; //TODO make this come from an include
-
-    typedef enum {RESET, RUNNING, LOAD_EXTERN, LOAD_DEASSERT, RESET_DEASSERT} state_t;
+    typedef enum logic [1:0] {RUNNING, LOAD_EXTERN, LOAD_DEASSERT, RESET_DEASSERT} state_t;
 
     state_t fsm_state_local;
     
@@ -56,15 +43,12 @@ module clock_counter #(
     assign o_clk_local_counter = clk_local_counter_local_q;
     assign o_clk_extern_counter = clk_extern_counter_local_q;
 
-    always @(posedge i_clk_local or negedge i_rst_n) begin
+    always_ff @(posedge i_clk_local or negedge i_rst_n) begin
         if (!i_rst_n) begin
             clk_counter_reset_local <= 1'b1;
             fsm_state_local <= RESET_DEASSERT;
         end else begin
             case (fsm_state_local)
-                RESET: begin
-                    fsm_state_local <= RUNNING;
-                end
                 RUNNING: begin
                     if (i_latch_counters) begin
                         fsm_state_local <= LOAD_EXTERN;
@@ -100,7 +84,7 @@ module clock_counter #(
                         fsm_state_local <= RUNNING;
                     end
                 end
-                
+                default: $error("Unreachable");   
             endcase
         end
     end
@@ -108,6 +92,8 @@ module clock_counter #(
     //TODO FIXME
     always_comb clock_present_extern = 1'b1;
     
+    //TODO with a slow ext clock, the ext counter isn't reset????
+
     //Resync back and forward for reset
     logic clk_counter_reset_ack_local;
     dual_ff_resync #( .RESET_VALUE(1'b0))
