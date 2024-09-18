@@ -2,7 +2,9 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
-module gt_wrapper (
+module gt_wrapper #(
+        parameter int RX_DATA_WIDTH = 64
+    ) (
         input  wire             i_refclk,
         input  wire             i_rx_usrclk,
         input  wire             i_rx_usrclk2,
@@ -19,7 +21,7 @@ module gt_wrapper (
                 
         input  wire             i_rx_polarity,
         
-        output wire [31:0]      o_rxdata,
+        output wire [RX_DATA_WIDTH-1:0]      o_rxdata,
         output wire             o_rxdatavaild,
         output wire [1:0]       o_rxheader,
         output wire             o_rxheader_valid,
@@ -33,16 +35,18 @@ module gt_wrapper (
     BUFG BUFG_u (
         .I(rxout_clk),
         .O(o_rxout_clk)
-    )
+    );
 
     localparam logic [2:0] CPLLREFCLKSEL = 3'b001;
     
     //These are for 64B/67B, rather than 64B/66B
     logic rxheader_unused;
 
-    //Using 32b data rather than 64b
-    logic [31:0] rxdata_unused; 
+    logic [63:0] rxdata; 
     
+    //Using RX_DATA_WIDTH lowest bits
+    assign o_rxdata = rxdata[RX_DATA_WIDTH-1:0];
+
     //------------------------- GT Instantiations  --------------------------
         GTXE2_CHANNEL #
         (
@@ -122,7 +126,7 @@ module gt_wrapper (
             .ES_VERT_OFFSET                         (9'b000000000),
 
            //-----------------------FPGA RX Interface Attributes-------------------------
-            .RX_DATA_WIDTH                          (32),
+            .RX_DATA_WIDTH                          (RX_DATA_WIDTH),
 
            //-------------------------PMA Attributes----------------------------
             .OUTREFCLK_SEL_INV                      (2'b11),
@@ -374,7 +378,7 @@ module gt_wrapper (
         .RXUSRCLK                       (i_rx_usrclk),
         .RXUSRCLK2                      (i_rx_usrclk2),
         //---------------- Receive Ports - FPGA RX interface Ports -----------------
-        .RXDATA                         ({rxdata_unused, o_rxdata}),
+        .RXDATA                         (rxdata),
         .RXDATAVALID                    (o_rxdatavaild),
         .RXGEARBOXSLIP                  (i_rxslip),
         .RXHEADER                       ({rxheader_unused, o_rxheader}),

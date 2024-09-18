@@ -1,3 +1,7 @@
+proc lexists name {
+    expr {![catch {file lstat $name finfo}]}
+}
+
 #Recursive glob
 proc rglob { dirpath patterns {exclude_pats {}} } {
     set rlist {}

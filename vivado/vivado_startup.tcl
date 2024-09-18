@@ -26,8 +26,16 @@ read_verilog [ rglob ${PROJ_SOURCES_DIR} *.sv] -sv -verbose
 #allowing only a subset of tcl syntax. Hence use -unmanaged. This loads the main XDC
 read_xdc $PROJ_SOURCES_DIR/${PROJ_NAME}.tcl -unmanaged -verbose
 
+
 #We don't want to flatten the hierarchy at this point, so that we can set attributes with tcl scripts
-synth_design -top $PROJ_NAME -part $TARGET_PART -flatten_hierarchy none
+synth_design -top $PROJ_NAME -part $TARGET_PART -flatten_hierarchy none -no_lc
+
+if {[lexists post_synth.tcl]} {
+    source post_synth.tcl    
+}
+
+#If we have nets with MARK_DEBUG, then insert an ILA
+batch_insert_ila 2048
 
 #These are specific timing constraints that we want to set on the synth'd but not yet flattened design. E.g. resyncs
 foreach constraint_file [ rglob ${CONSTRAINTS_DIR} *.tcl ] {

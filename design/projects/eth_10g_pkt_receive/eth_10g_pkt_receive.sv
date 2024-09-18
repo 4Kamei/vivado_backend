@@ -213,18 +213,42 @@ module eth_10g_pkt_receive #(
         .i_s_axis_tdest(1'b0),  //Ignored
         .i_s_axis_tuser(1'b0)   //Ignored
     );
-    
-    logic clk_gtx_out;
-    
+        
+    localparam int RX_DATA_WIDTH = 64;
+
+    logic           clk_gtx_out; 
     logic [31:0]    gtx_sfp1_rx_data;
     logic [1:0]     gtx_sfp1_rx_header;
     logic           gtx_sfp1_rx_datavalid;
     logic           gtx_sfp1_rx_headervalid;
     logic [2:0]     gtx_sfp1_rx_status;
     logic           gtx_sfp1_rx_reset_done;
+    
+    (*MARK_DEBUG="TRUE"*) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
+    (*MARK_DEBUG="TRUE"*) logic [1:0]     gtx_sfp1_rx_header_q;
+    (*MARK_DEBUG="TRUE"*) logic           gtx_sfp1_rx_datavalid_q;
+    (*MARK_DEBUG="TRUE"*) logic           gtx_sfp1_rx_headervalid_q;
+    (*MARK_DEBUG="TRUE"*) logic [2:0]     gtx_sfp1_rx_status_q;
+    (*MARK_DEBUG="TRUE"*) logic           gtx_sfp1_rx_reset_done_q;
+   
+    //For debug purposes
+    always_ff @(posedge clk_gtx) begin    
+        gtx_sfp1_rx_data_q <= gtx_sfp1_rx_data;
+        gtx_sfp1_rx_header_q <= gtx_sfp1_rx_header;
+        gtx_sfp1_rx_datavalid_q <= gtx_sfp1_rx_datavalid;
+        gtx_sfp1_rx_headervalid_q <= gtx_sfp1_rx_headervalid;
+        gtx_sfp1_rx_status_q <= gtx_sfp1_rx_status;
+        gtx_sfp1_rx_reset_done_q <= gtx_sfp1_rx_reset_done;
+    end
+   
+    
+    //FIXME refclk needs to be clocked by the external clock, which comes from the clock generator chip thing
 
-    gt_wrapper gtx_lane_0_u (    
-        .i_refclk(clk_gtx),
+
+    gt_wrapper #(
+        .RX_DATA_WIDTH(RX_DATA_WIDTH))
+    gtx_lane_0_u (    
+        .i_refclk(/* FIXME */),
         .i_rx_usrclk(1'b0),
         .i_rx_usrclk2(1'b0),
         .o_rxout_clk(clk_gtx_out),
