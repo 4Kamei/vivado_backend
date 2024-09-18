@@ -15,6 +15,9 @@ module eth_10g_pkt_receive #(
         input wire i_uart_rx,
         output wire o_uart_tx,
 
+        input wire i_gtx_sfp1_rx_p,
+        input wire i_gtx_sfp1_rx_n,
+        
         output wire o_debug_right,
         output wire o_debug_left,
         
@@ -29,11 +32,6 @@ module eth_10g_pkt_receive #(
     logic clk_gtx;
     logic pll_locked_2;
     logic pll_locked_1;
-    
-    assign o_eth_led[3] = !i_rst_n;
-    assign o_eth_led[2] = 1'b0;
-    assign o_eth_led[1] = pll_locked_2;
-    assign o_eth_led[0] = pll_locked_1;
 
     logic PLLE2_BASE_u_feedback_1;
     //F_OUT = F_IN * M / (D * O)
@@ -171,7 +169,7 @@ module eth_10g_pkt_receive #(
         .AXIS_DEVICE_ID(8'h01)) 
     clock_counter_ad_rx_u (
         .i_clk(i_clk),
-        .i_clk_extern(clk_gtx),
+        .i_clk_extern(clk_gtx_out),
         .i_rst_n(i_rst_n),
 
         //Slave debug interface
@@ -190,9 +188,8 @@ module eth_10g_pkt_receive #(
     logic uart_tx_s_axis_tvalid;
     logic uart_tx_s_axis_tready;
     logic [UART_DEBUG_BUS_AXIS_WIDTH-1:0] uart_tx_s_axis_tdata;
-    logic uart_tx_s_axis_tlast;
-    
-    
+    logic uart_tx_s_axis_tlast; 
+
     uart_packet_tx #(
         .CLOCK_FREQUENCY(CLOCK_FREQUENCY),
         .BAUD_RATE(UART_BAUD_RATE),
@@ -213,6 +210,42 @@ module eth_10g_pkt_receive #(
         .i_s_axis_tdest(1'b0),  //Ignored
         .i_s_axis_tuser(1'b0)   //Ignored
     );
-
     
+    logic clk_gtx_out;
+    
+    logic [31:0]    gtx_sfp1_rx_data;
+    logic [1:0]     gtx_sfp1_rx_header;
+    logic           gtx_sfp1_rx_datavalid;
+    logic           gtx_sfp1_rx_headervalid;
+    logic [2:0]     gtx_sfp1_rx_status;
+    logic           gtx_sfp1_rx_reset_done;
+
+    gt_wrapper gtx_lane_0_u (    
+        .i_refclk(clk_gtx),
+        .i_rx_usrclk(1'b0),
+        .i_rx_usrclk2(1'b0),
+        .o_rxout_clk(clk_gtx_out),
+        //Resets
+        .i_lpm_reset(!i_rst_n),
+        .i_gtx_rx_reset(!i_rst_n),
+        .i_gtx_tx_reset(!i_rst_n),
+        //Lanes
+        .i_rx_p(i_gtx_sfp1_rx_p),
+        .i_rx_n(i_gtx_sfp1_rx_n),
+
+        .i_rxslip(1'b0),
+        .i_rx_polarity(1'b0),
+
+        .o_rxdata(gtx_sfp1_rx_data),
+        .o_rxdatavaild(gtx_sfp1_rx_datavalid),
+        .o_rxheader(gtx_sfp1_rx_header),
+        .o_rxheader_valid(gtx_sfp1_rx_headervalid),
+        .o_rxstartofseq(/* Unused */),
+        .o_rx_status(gtx_sfp1_rx_status),
+        .o_rx_reset_done(gtx_sfp1_rx_reset_done)
+    );
+ 
+    assign o_eth_led[3] = gtx_sfp1_rx_reset_done;
+    assign o_eth_led[2:0] = gtx_sfp1_rx_status;
+
 endmodule

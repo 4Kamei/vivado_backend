@@ -4,6 +4,8 @@
 
 module gt_wrapper (
         input  wire             i_refclk,
+        input  wire             i_rx_usrclk,
+        input  wire             i_rx_usrclk2,
         output wire             o_rxout_clk,
         
         input  wire             i_lpm_reset,
@@ -18,19 +20,22 @@ module gt_wrapper (
         input  wire             i_rx_polarity,
         
         output wire [31:0]      o_rxdata,
-        output wire             o_rxdatavaild
+        output wire             o_rxdatavaild,
         output wire [1:0]       o_rxheader,
         output wire             o_rxheader_valid,
         output wire             o_rxstartofseq,
-        output wire             o_rx_status,
+        output wire [2:0]       o_rx_status,
         output wire             o_rx_reset_done
     );
         
     localparam logic [2:0] CPLLREFCLKSEL = 3'b001;
     
     //These are for 64B/67B, rather than 64B/66B
-    logic rxdatavalid_unused;
     logic rxheader_unused;
+
+    //Using 32b data rather than 64b
+    logic [31:0] rxdata_unused; 
+    
     //------------------------- GT Instantiations  --------------------------
         GTXE2_CHANNEL #
         (
@@ -315,9 +320,9 @@ module gt_wrapper (
         .DRPADDR                        (9'b000000000),
         .DRPCLK                         (1'b0),
         .DRPDI                          (1'b0),
-        .DRPDO                          (1'b0),
+        .DRPDO                          (/* Unused */),
         .DRPEN                          (1'b0),
-        .DRPRDY                         (1'b0),
+        .DRPRDY                         (/* Unused */),
         .DRPWE                          (1'b0),
         //----------------------------- Clocking Ports -----------------------------
         .GTREFCLKMONITOR                (/* GTREFCLKMONITOR */),
@@ -359,11 +364,11 @@ module gt_wrapper (
         //-------- Receive Ports - FPGA RX Interface Datapath Configuration --------
         .RX8B10BEN                      (1'b0),
         //---------------- Receive Ports - FPGA RX Interface Ports -----------------
-        .RXUSRCLK                       (rxusrclk),
-        .RXUSRCLK2                      (rxusrclk2),
+        .RXUSRCLK                       (i_rx_usrclk),
+        .RXUSRCLK2                      (i_rx_usrclk2),
         //---------------- Receive Ports - FPGA RX interface Ports -----------------
-        .RXDATA                         (o_rxdata),
-        .RXDATAVALID                    ({rxdatavalid_unused, o_rxdatavaild}),
+        .RXDATA                         ({rxdata_unused, o_rxdata}),
+        .RXDATAVALID                    (o_rxdatavaild),
         .RXGEARBOXSLIP                  (i_rxslip),
         .RXHEADER                       ({rxheader_unused, o_rxheader}),
         .RXHEADERVALID                  (o_rxheader_valid),
