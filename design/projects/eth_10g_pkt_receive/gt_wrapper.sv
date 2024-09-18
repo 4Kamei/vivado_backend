@@ -27,7 +27,14 @@ module gt_wrapper (
         output wire [2:0]       o_rx_status,
         output wire             o_rx_reset_done
     );
-        
+    
+    logic rxout_clk;
+    //BUFG/BUFH ?   UG472 P113
+    BUFG BUFG_u (
+        .I(rxout_clk),
+        .O(o_rxout_clk)
+    )
+
     localparam logic [2:0] CPLLREFCLKSEL = 3'b001;
     
     //These are for 64B/67B, rather than 64B/66B
@@ -458,7 +465,7 @@ module gt_wrapper (
         //---------- Receive Ports - RX Fabric ClocK Output Control Ports ----------
         .RXRATEDONE                     (/* Unused */),
         //------------- Receive Ports - RX Fabric Output Control Ports -------------
-        .RXOUTCLK                       (o_rxout_clk),
+        .RXOUTCLK                       (rxout_clk),
         .RXOUTCLKFABRIC                 (/* Unused */),
         .RXOUTCLKPCS                    (/* Unused */),
         .RXOUTCLKSEL                    (3'b010), //Choose The recovered clock
