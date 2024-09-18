@@ -8,15 +8,16 @@ module eth_10g_pkt_receive #(
         parameter UART_MAX_PACKET_LENGTH = 16,
         parameter UART_DEBUG_BUS_AXIS_WIDTH = 8
     ) (
-        input wire i_sys_clk_p,
-        input wire i_sys_clk_n,
+        input  wire i_sys_clk_p,
+        input  wire i_sys_clk_n,
 
-        input wire i_rst_n,
-        input wire i_uart_rx,
+        input  wire i_rst_n,
+        input  wire i_uart_rx,
         output wire o_uart_tx,
 
-        input wire i_gtx_sfp1_rx_p,
-        input wire i_gtx_sfp1_rx_n,
+        output wire o_gtx_sfp1_tx_disable,
+        input  wire i_gtx_sfp1_rx_p,
+        input  wire i_gtx_sfp1_rx_n,
         
         output wire o_debug_right,
         output wire o_debug_left,
@@ -26,6 +27,8 @@ module eth_10g_pkt_receive #(
 
     assign o_debug_left = 1'b0;
     assign o_debug_right = i_uart_rx;
+
+    assign o_gtx_sfp1_tx_disable = 1'b0;
 
     logic i_clk;
     logic clk_78_mhz;

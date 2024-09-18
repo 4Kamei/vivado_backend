@@ -13,17 +13,15 @@ create_clock -period 5.000 [get_ports i_sys_clk_p]
 set_property PACKAGE_PIN AE10 [get_ports i_sys_clk_p]
 set_property IOSTANDARD DIFF_SSTL15 [get_ports i_sys_clk_p]
 
-
-
 #Reset
 set_property PACKAGE_PIN AG27 [get_ports i_rst_n]
-set_property IOSTANDARD LVCMOS25 [get_ports i_rst_n]
+set_property IOSTANDARD LVCMOS33 [get_ports i_rst_n]
 
 #Debug Header
 set_property PACKAGE_PIN J28  [get_ports o_debug_left]
-set_property IOSTANDARD  LVCMOS25 [get_ports o_debug_left]
+set_property IOSTANDARD  LVCMOS33 [get_ports o_debug_left]
 set_property PACKAGE_PIN H29  [get_ports o_debug_right]
-set_property IOSTANDARD  LVCMOS25 [get_ports o_debug_right]
+set_property IOSTANDARD  LVCMOS33 [get_ports o_debug_right]
 
 #Leds
 set led_pins {A22 C19 B19 E18}
@@ -32,15 +30,24 @@ for {set i 0} {$i < 4} {incr i} {
     set led_pin [lindex $led_pins $i]
 
     set_property PACKAGE_PIN $led_pin $led_port
-    set_property IOSTANDARD LVCMOS15 $led_port
+    set_property IOSTANDARD LVCMOS33 $led_port
 }
 
 #Uart
 set_property PACKAGE_PIN AJ26 [get_ports i_uart_rx]
-set_property IOSTANDARD LVCMOS25 [get_ports i_uart_rx]
+set_property IOSTANDARD LVCMOS33 [get_ports i_uart_rx]
 
 set_property PACKAGE_PIN AK26 [get_ports o_uart_tx]
-set_property IOSTANDARD LVCMOS25 [get_ports o_uart_tx]
+set_property IOSTANDARD LVCMOS33 [get_ports o_uart_tx]
+
+#SFP lane 1
+set_property PACKAGE_PIN K6 [get_ports i_gtx_sfp1_rx_p]
+set_property PACKAGE_PIN K5 [get_ports i_gtx_sfp1_rx_n]
+
+set_property PACKAGE_PIN T28 [get_ports o_gtx_sfp1_tx_disable]
+set_property IOSTANDARD LVCMOS33 [get_ports o_gtx_sfp1_tx_disable]
+
+#Placement constraints
 
 
 #Extra Configuration

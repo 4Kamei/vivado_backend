@@ -105,7 +105,7 @@ module gt_wrapper (
            //-------------------------RX Margin Analysis Attributes----------------------------
             .ES_CONTROL                             (6'b000000),
             .ES_ERRDET_EN                           ("FALSE"),
-            .ES_EYE_SCAN_EN                         (1'b1),
+            .ES_EYE_SCAN_EN                         ("FALSE"),
             .ES_HORZ_OFFSET                         (12'h000),
             .ES_PMA_CFG                             (10'b0000000000),
             .ES_PRESCALE                            (5'b00000),
