@@ -30,8 +30,9 @@ async def test_uart_receive_with_reset(dut):
     dut.i_rst_n.value = 1
     await RisingEdge(dut.i_clk_local)
 
-    await Timer(10000, "us")
+    await Timer(100, "us")
 
+    await RisingEdge(dut.i_clk_local)
     dut.i_latch_counters.value = 1
     await RisingEdge(dut.i_clk_local)
     dut.i_latch_counters.value = 0

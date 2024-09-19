@@ -59,13 +59,16 @@ module clock_counter #(
                 end
                 LOAD_EXTERN: begin
                     if (!clock_present_extern) begin
-                        $error("We don't have an external clock present to monitor. Need to reset the counters to 0");
+                        //$error("We don't have an external clock present to monitor. Need to reset the counters to 0");
+                        clk_extern_counter_local_q <= 64'b0;
+                        clk_counter_latch_local <= 1'b0;
+                        fsm_state_local <= LOAD_DEASSERT;
                     end else begin
                         if (clk_counter_latch_ack_local) begin
                             //We are guaranteed to have stopped the clock at
                             //this point, as it's gated by
                             //clk_counter_latch_extern, that's been resync'd here. 
-                            clk_extern_counter_local_q <= clk_counter_extern;
+                            clk_extern_counter_local_q <= clk_counter_extern_handshake_out;
                             clk_counter_latch_local <= 1'b0;
                             fsm_state_local <= LOAD_DEASSERT;
                         end
@@ -93,54 +96,41 @@ module clock_counter #(
     always_comb clock_present_extern = 1'b1;
     
     //TODO with a slow ext clock, the ext counter isn't reset????
+    
 
     //Resync back and forward for reset
     logic clk_counter_reset_ack_local;
-    dual_ff_resync #( .RESET_VALUE(1'b0))
-    clk_counter_reset_resync_u ( 
-        .i_clk(i_clk_extern), 
-        //This is deasserted asynchronously, relative to the i_clk_extern, as i_rst_n is sync to i_clk. 
-        //This shouldn't cause issues for a resync unless it's being driven AFTER reset is deasserted with a
-        //signal that is different from RESET_VALUE.
-        .i_rst_n(i_rst_n),      
-        .i_signal(clk_counter_reset_local),
-        .o_signal(clk_counter_reset_extern)
+    handshake_resync
+    handshake_resync_counter_reset_u (
+        .i_send_clk(i_clk_local),
+        .i_recv_clk(i_clk_extern),
+        .i_rst_n(i_rst_n),
+        .i_valid(clk_counter_reset_local),
+        .o_valid(clk_counter_reset_extern),
+
+        .i_ack(clk_counter_reset_extern),
+        .o_ack(clk_counter_reset_ack_local)
     );
 
-    dual_ff_resync #( .RESET_VALUE(1'b0))
-    clk_counter_reset_resync_back_u ( 
-        .i_clk(i_clk_local), 
-        //This is deasserted asynchronously, relative to the i_clk_extern, as i_rst_n is sync to i_clk. 
-        //This shouldn't cause issues for a resync unless it's being driven AFTER reset is deasserted with a
-        //signal that is different from RESET_VALUE.
-        .i_rst_n(i_rst_n),      
-        .i_signal(clk_counter_reset_extern),
-        .o_signal(clk_counter_reset_ack_local)
+    //Resync back and forward for counter latch
+    logic clk_counter_latch_ack_local;
+    logic [CLOCK_COUNTER_WIDTH-1:0] clk_counter_extern_handshake_out;
+    handshake_data_resync #(.DATA_WIDTH(CLOCK_COUNTER_WIDTH)) 
+    handshake_data_resync_counter_latch_u (
+        .i_send_clk(i_clk_local),
+        .i_recv_clk(i_clk_extern),
+        .i_rst_n(i_rst_n),
+        .i_valid(clk_counter_latch_local),
+        .o_valid(clk_counter_latch_extern),
+
+        .i_ack(clk_counter_latch_extern),
+        .o_ack(clk_counter_latch_ack_local),
+
+        .i_data(clk_counter_extern),
+        .o_data(clk_counter_extern_handshake_out)
     );
     
-    //Resync back and forward for latch
-    logic clk_counter_latch_ack_local;
-    dual_ff_resync #( .RESET_VALUE(1'b0))
-    clk_counter_latch_resync_u ( 
-        .i_clk(i_clk_extern), 
-        //This is deasserted asynchronously, relative to the i_clk_extern, as i_rst_n is sync to i_clk. 
-        //This shouldn't cause issues for a resync unless it's being driven AFTER reset is deasserted with a
-        //signal that is different from RESET_VALUE.
-        .i_rst_n(i_rst_n),      
-        .i_signal(clk_counter_latch_local),
-        .o_signal(clk_counter_latch_extern)
-    );
 
-    dual_ff_resync #( .RESET_VALUE(1'b0))
-    clk_counter_latch_resync_back_u ( 
-        .i_clk(i_clk_local), 
-        //This is deasserted asynchronously, relative to the i_clk_extern, as i_rst_n is sync to i_clk. 
-        //This shouldn't cause issues for a resync unless it's being driven AFTER reset is deasserted with a
-        //signal that is different from RESET_VALUE.
-        .i_rst_n(i_rst_n),      
-        .i_signal(clk_counter_latch_extern),
-        .o_signal(clk_counter_latch_ack_local)
-    );
 
     //local domain
     logic [CLOCK_COUNTER_WIDTH-1:0] clk_counter_local;
