@@ -2,7 +2,6 @@ TOPLEVEL = i2c_master
 
 TOPLEVEL_LANG = verilog
 VERILOG_SOURCES = ${PROJ_ROOT}/design/sources/*.sv
-VERILOG_SOURCES += ${PROJ_ROOT}/cocotb/tests/i2c_master/i2c_master.sv
 MODULE = ${TOPLEVEL}
 SIM = verilator
 EXTRA_ARGS += "--trace"

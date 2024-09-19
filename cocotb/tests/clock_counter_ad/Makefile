@@ -2,6 +2,7 @@ TOPLEVEL = clock_counter_ad
 
 TOPLEVEL_LANG = verilog
 VERILOG_SOURCES = ${PROJ_ROOT}/design/sources/*.sv
+VERILOG_SOURCES += ${PROJ_ROOT}/design/sources/**/*.sv
 MODULE = ${TOPLEVEL}
 SIM = verilator
 EXTRA_ARGS += "--trace"
