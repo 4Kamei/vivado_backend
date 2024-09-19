@@ -58,11 +58,15 @@ in pkgs.mkShell {
     python311Packages.pyzmq
     python311Packages.pytest
     python311Packages.pyserial
-
+    python311Packages.json5
+    python311Packages.jsonschema
     #Alex Forenchich
     cocotbext-axi
     cocotbext-uart
     cocotbext-i2c
+
+    #For converting wavedrom files into ascii
+    #asciiwave
 
     cmake
   ];
@@ -70,6 +74,7 @@ in pkgs.mkShell {
   shellHook = ''
     echo "Sourcing sourceme"
     source sourceme
-  '';
+    export PATH="$(pwd)/bin/:$PATH"
+    '';
 
 }
