@@ -92,11 +92,16 @@ module clock_counter #(
         end
     end
     
-    //TODO FIXME
-    always_comb clock_present_extern = 1'b1;
-    
-    //TODO with a slow ext clock, the ext counter isn't reset????
-    
+    logic clock_present_extern_extern;
+
+    always_comb clock_present_extern_extern = clk_counter_extern != 0;
+    dual_ff_resync #(.RESET_VALUE(1'b0))
+    dual_ff_clk_present_resync_u (
+        .i_clk(i_clk_local),
+        .i_rst_n(i_rst_n),
+        .i_signal(clock_present_extern_extern),
+        .o_signal(clock_present_extern)
+    );
 
     //Resync back and forward for reset
     logic clk_counter_reset_ack_local;
