@@ -8,8 +8,14 @@ module eth_10g_pkt_receive #(
         parameter UART_MAX_PACKET_LENGTH = 16,
         parameter UART_DEBUG_BUS_AXIS_WIDTH = 8
     ) (
+        inout  wire b_sdl,
+        inout  wire b_scl,
+
         input  wire i_sys_clk_p,
         input  wire i_sys_clk_n,
+
+        input  wire i_gtx_clk_p,
+        input  wire i_gtx_clk_n,
 
         input  wire i_rst_n,
         input  wire i_uart_rx,
@@ -25,60 +31,29 @@ module eth_10g_pkt_receive #(
         output wire [3:0] o_eth_led
     );
 
-    assign o_debug_left = 1'b0;
-    assign o_debug_right = i_uart_rx;
+    assign o_debug_left = i2c_i_scl;
+    assign o_debug_right = i2c_i_sda;
 
     assign o_gtx_sfp1_tx_disable = 1'b0;
-
-    logic i_clk;
-    logic clk_78_mhz;
-    logic clk_gtx;
-    logic pll_locked_2;
-    logic pll_locked_1;
-
-    logic PLLE2_BASE_u_feedback_1;
-    //F_OUT = F_IN * M / (D * O)
-    //VCO should be in the range of (800 - 1600)
-    PLLE2_BASE #(
-        .CLKIN1_PERIOD(5),       // 5ns period
-        .BANDWIDTH("OPTIMIZED"),
-        .DIVCLK_DIVIDE(4),
-        .CLKOUT0_DIVIDE(16),    //800Mhz / 128 = 6.25Mhz
-        .CLKFBOUT_MULT(25)        //VCO Frequency of 200 * 4 =  800Mhz 
-    )
-    PLLE2_BASE_1_u (
-        .CLKIN1(i_clk),
-        .RST(!i_rst_n),
-        .PWRDWN(1'b0),
-        .CLKOUT0(clk_78_mhz),
-        .LOCKED(pll_locked_1),
-        .CLKFBOUT(PLLE2_BASE_u_feedback_1),
-        .CLKFBIN(PLLE2_BASE_u_feedback_1)
-    );
-    logic PLLE2_BASE_u_feedback_2;
-    //F_OUT = F_IN * M / (D * O)
-    //VCO should be in the range of (800 - 1600)
-    PLLE2_BASE #(
-        .CLKIN1_PERIOD(12.8),       // 5ns period
-        .BANDWIDTH("OPTIMIZED"),
-        .DIVCLK_DIVIDE(2),
-        .CLKOUT0_DIVIDE(4),    //800Mhz / 128 = 6.25Mhz
-        .CLKFBOUT_MULT(33)        //VCO Frequency of 200 * 4 =  800Mhz 
-    )
-    PLLE2_BASE_2_u (
-        .CLKIN1(clk_78_mhz),
-        .RST(!i_rst_n),
-        .PWRDWN(1'b0),
-        .CLKOUT0(clk_gtx),
-        .LOCKED(pll_locked_2),
-        .CLKFBOUT(PLLE2_BASE_u_feedback_2),
-        .CLKFBIN(PLLE2_BASE_u_feedback_2)
-    );
 
     IBUFGDS IBUFGDS_u (
         .I(i_sys_clk_p),
         .IB(i_sys_clk_n),
         .O(i_clk));
+
+    logic clk_gtx;
+
+    IBUFDS_GTE2 #(
+        .CLKCM_CFG("TRUE"), // Refer to Transceiver User Guide
+        .CLKRCV_TRST("TRUE"), // Refer to Transceiver User Guide
+        .CLKSWING_CFG(2'b11))
+    IBUFDS_GTE2_u (
+        .I(i_gtx_clk_p),
+        .IB(i_gtx_clk_n),
+        .CEB(1'b0),
+        .ODIV2(/* Unconnected */),
+        .O(clk_gtx)
+    );
 
     uart_packet_rx #(
         .CLOCK_FREQUENCY(CLOCK_FREQUENCY),
@@ -146,7 +121,7 @@ module eth_10g_pkt_receive #(
         .AXIS_DEVICE_ID(8'h00)) 
     clock_counter_ad_ref_u (
         .i_clk(i_clk),
-        .i_clk_extern(clk_78_mhz),
+        .i_clk_extern(clk_gtx),
         .i_rst_n(i_rst_n),
 
         //Slave debug interface
@@ -182,12 +157,67 @@ module eth_10g_pkt_receive #(
         .i_s_axis_tlast(clock_counter_2_s_axis_tlast),  
        
         //Master debug interface
+        .o_m_axis_tvalid(i2c_master_s_axis_tvalid),
+        .i_m_axis_tready(i2c_master_s_axis_tready),
+        .o_m_axis_tdata(i2c_master_s_axis_tdata),
+        .o_m_axis_tlast(i2c_master_s_axis_tlast)
+    );
+    
+    logic i2c_master_s_axis_tvalid;
+    logic i2c_master_s_axis_tready;
+    logic [UART_DEBUG_BUS_AXIS_WIDTH-1:0] i2c_master_s_axis_tdata;
+    logic i2c_master_s_axis_tlast;
+//  OBUFT OBUFT_u
+//  (
+//      .I(1'b0),
+//      .T(~o_sda),  //T is active-low
+//      .O(i_sda)
+//      .IO(PAD)
+//  );
+
+    IOBUF IOBUF_sda_u (
+        I(1'b0),
+        IO(~i2c_o_sda),
+        O(i2c_i_sda),
+        T(b_sda)
+    );
+    
+    IOBUF IOBUF_scl_u (
+        I(1'b0),
+        IO(~i2c_o_scl),
+        O(i2c_i_scl),
+        T(b_scl)
+    );
+
+    i2c_master_ad #(
+        .AXIS_DEVICE_TYPE(8'h02),
+        .AXIS_DEVICE_ID(8'h01),
+        .CLOCK_FREQUENCY(200_000_000),
+        .I2C_SPEED_BPS(400_000))
+    i2c_master_ad_u (
+        .i_clk(i_clk),
+        .i_rst_n(i_rst_n),
+
+        //Slave debug interface
+        .i_s_axis_tvalid(i2c_master_s_axis_tvalid),
+        .o_s_axis_tready(i2c_master_s_axis_tready),
+        .i_s_axis_tdata(i2c_master_s_axis_tdata),  
+        .i_s_axis_tlast(i2c_master_s_axis_tlast),  
+       
+        //Master debug interface
         .o_m_axis_tvalid(uart_tx_s_axis_tvalid),
         .i_m_axis_tready(uart_tx_s_axis_tready),
         .o_m_axis_tdata(uart_tx_s_axis_tdata),
-        .o_m_axis_tlast(uart_tx_s_axis_tlast)
-    );
+        .o_m_axis_tlast(uart_tx_s_axis_tlast),
 
+        
+        .i_sda(i2c_i_sda),
+        .i_scl(i2c_i_scl),
+
+        .o_sda(i2c_o_sda),
+        .o_scl(i2c_o_scl)
+    );
+    
     logic uart_tx_s_axis_tvalid;
     logic uart_tx_s_axis_tready;
     logic [UART_DEBUG_BUS_AXIS_WIDTH-1:0] uart_tx_s_axis_tdata;
@@ -244,11 +274,10 @@ module eth_10g_pkt_receive #(
     
     //FIXME refclk needs to be clocked by the external clock, which comes from the clock generator chip thing
 
-
     gt_wrapper #(
         .RX_DATA_WIDTH(RX_DATA_WIDTH))
     gtx_lane_0_u (    
-        .i_refclk(/* FIXME */),
+        .i_refclk(clk_gtx),
         .i_rx_usrclk(1'b0),
         .i_rx_usrclk2(1'b0),
         .o_rxout_clk(clk_gtx_out),

@@ -47,7 +47,10 @@ set_property PACKAGE_PIN K5 [get_ports i_gtx_sfp1_rx_n]
 set_property PACKAGE_PIN T28 [get_ports o_gtx_sfp1_tx_disable]
 set_property IOSTANDARD LVCMOS33 [get_ports o_gtx_sfp1_tx_disable]
 
-#Placement constraints
+set_property PACKAGE_PIN P23 [get_ports b_scl]
+set_property IOSTANDARD LVCMOS33 [get_ports b_scl]
+set_property PACKAGE_PIN N25 [get_ports b_sda]
+set_property IOSTANDARD LVCMOS33 [get_ports b_sda]
 
 
 #Extra Configuration
@@ -65,8 +68,6 @@ if {0} {
     #Reading:
     #   1 on tristate => 1
     #   0 on tristate => 0
-    PLL_SCL P23
-    PLL_SDA N25 
 
     #Also connected
 
