@@ -80,7 +80,7 @@ module i2c_master #(
         READ_IN_DATA_NACK,
         READ_IN_STOP_CONDITION_PRE,
         READ_IN_STOP_CONDITION
-    } fsm_state_t /*verilator public */;
+    } fsm_state_t;
 
     localparam int CLK_COUNTER_WIDTH = 25;
 
@@ -171,7 +171,8 @@ module i2c_master #(
     assign o_ready = ready_q;
     assign o_sda   = sda_q;
     assign o_scl   = scl_q;
-    
+   
+    assign o_read_data = data_q;
     
     //Have 2 paths through the FSM, these are:
     //  
