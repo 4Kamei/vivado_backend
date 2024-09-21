@@ -8,7 +8,8 @@
 //  OBUFT OBUFT_u 
 //  (
 //      .I(1'b0),
-//      .T(~o_sda),  //T is active-low
+//      .T(o_sda),  //T is active-low, and when o_sda is 0 we actually want to
+//      drive 0
 //      .O(i_sda)
 //      .IO(PAD)
 //  );
@@ -98,6 +99,7 @@ module i2c_master #(
 
     logic [1:0] counter_top_bits_prev;
     logic [1:0] counter_top_bits;
+    logic       clock_stretch_stop_counter;
 
     always_comb counter_top_bits = i2c_clk_counter[CLK_COUNTER_WIDTH-1-:2];
     
@@ -110,7 +112,9 @@ module i2c_master #(
                 i2c_clk_counter <= 0;
             end else if (fsm_state != IDLE) begin
                 counter_top_bits_prev <= counter_top_bits;
-                i2c_clk_counter <= i2c_clk_counter + COUNTER_INCR; 
+                if (!clock_stretch_stop_counter) begin
+                    i2c_clk_counter <= i2c_clk_counter + COUNTER_INCR; 
+                end
             end
         end
     end
@@ -118,7 +122,11 @@ module i2c_master #(
     logic           state_advance_en;
     logic           scl_high_en;
     logic           scl_low_en;
-    
+
+    //When we set scl high, we wait until it is actually high, then set the
+    //'scl_high_strobe' for one cycle to show it actually is high.
+    logic           scl_high_strobe;
+
     //Enables for various things - Use the msb 2 bits to create enables,
     //because we want to things at 4X the clock of the I2C. These are
     //  scl_high_en     : setting SCL high
@@ -139,6 +147,8 @@ module i2c_master #(
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
             scl_q <= 1'b1;
+            clock_stretch_stop_counter <= 1'b0;
+            scl_high_strobe <= 1'b0;
         end else begin
             if (fsm_state != WRITE_STOP_CONDITION && 
                 fsm_state != READ_IN_STOP_CONDITION && 
@@ -150,8 +160,16 @@ module i2c_master #(
                     scl_q <= 1'b0;
                 end
              end
+             scl_high_strobe <= 1'b0;
              if (scl_high_en) begin
                 scl_q <= 1'b1;
+                clock_stretch_stop_counter <= 1'b1;
+             end
+             //Now we wait for i_scl to come back high - this means we
+             //actually have the bus ready to write the next bit
+             if (clock_stretch_stop_counter && i_scl) begin
+                clock_stretch_stop_counter <= 1'b0;
+                scl_high_strobe <= 1'b1;
              end
         end
     end
@@ -230,7 +248,7 @@ module i2c_master #(
                         sda_q <= 1'b1;
                         sda_q_set <= 1'b1;
                     end
-                    if (scl_high_en && sda_q_set) begin
+                    if (scl_high_strobe && sda_q_set) begin
                         if (i_sda == 1'b0) begin
                             sda_q_set <= 1'b0;
                             fsm_state <= WRITE_REG_ADDR;
@@ -257,7 +275,7 @@ module i2c_master #(
                         sda_q <= 1'b1;
                         sda_q_set <= 1'b1;
                     end
-                    if (scl_high_en && sda_q_set) begin
+                    if (scl_high_strobe && sda_q_set) begin
                         if (i_sda == 1'b0) begin
                             fsm_state <= WRITE_DATA;
                             fsm_counter <= 5'd7;
@@ -284,7 +302,7 @@ module i2c_master #(
                         sda_q <= 1'b1;
                         sda_q_set <= 1'b1;
                     end
-                    if (scl_high_en && sda_q_set) begin
+                    if (scl_high_strobe && sda_q_set) begin
                         if (i_sda == 1'b0) begin
                             fsm_state <= WRITE_STOP_CONDITION_PRE;
                             fsm_counter <= 5'd7;
@@ -338,7 +356,7 @@ module i2c_master #(
                         sda_q <= 1'b1;
                         sda_q_set <= 1'b1;
                     end
-                    if (scl_high_en && sda_q_set) begin
+                    if (scl_high_strobe && sda_q_set) begin
                         if (i_sda == 1'b0) begin
                             sda_q_set <= 1'b0;
                             fsm_state <= READ_OUT_REG_ADDR;
@@ -365,7 +383,7 @@ module i2c_master #(
                         sda_q <= 1'b1;
                         sda_q_set <= 1'b1;
                     end
-                    if (scl_high_en && sda_q_set) begin
+                    if (scl_high_strobe && sda_q_set) begin
                         if (i_sda == 1'b0) begin
                             fsm_state <= READ_OUT_STOP_CONDITION_PRE;
                             fsm_counter <= 5'd7;
@@ -419,7 +437,7 @@ module i2c_master #(
                         sda_q <= 1'b1;
                         sda_q_set <= 1'b1;
                     end
-                    if (scl_high_en && sda_q_set) begin
+                    if (scl_high_strobe && sda_q_set) begin
                         if (i_sda == 1'b0) begin
                             sda_q_set <= 1'b0;
                             fsm_state <= READ_IN_DATA;
