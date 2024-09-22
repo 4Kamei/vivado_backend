@@ -37,13 +37,16 @@ def write_packet(data, expect_response=0):
         return pkts
 
 #Identify packet
-input_packets = write_packet([0x01, 0x00], expect_response=2)
+input_packets = write_packet([0x01, 0x00], expect_response=5)
 
 print(input_packets)
 
 for input_packet in input_packets:
     type = input_packet[2]
     id = input_packet[3]
+    
+    if type != 0x01:
+        continue
 
 
     #Write 1 to address 0

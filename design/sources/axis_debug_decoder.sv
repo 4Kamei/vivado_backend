@@ -48,13 +48,13 @@ module axis_debug_decoder #(
         W_DATA_WAIT,
         RESPONSE_START,
         RESPONDING
-    } pkt_parser_state_t /*verilator public */;
+    } pkt_parser_state_t ;
     
     typedef enum logic [1:0] {
         IDENTIFY,
         READ,
         WRITE
-    } pkt_type_t /*verilator public */;
+    } pkt_type_t ;
 
     typedef enum logic [2:0] {
         PKT_TYPE,
@@ -65,7 +65,7 @@ module axis_debug_decoder #(
         PKT_END,
         PKT_READ_DATA,
         PKT_READ_ADDR
-    } pkt_transmission_state_t /*verilator public */;
+    } pkt_transmission_state_t ;
 
     pkt_parser_state_t          pkt_parser_state;
     pkt_type_t                  pkt_type;
@@ -284,7 +284,7 @@ module axis_debug_decoder #(
         FORWARD_PKT, 
         FORWARD_PKT_TLAST,
         INTERNAL_PACKET_START
-    } pkt_forwarder_state_t /*verilator public */;
+    } pkt_forwarder_state_t ;
     
     pkt_forwarder_state_t pkt_forwarder_state;
 
@@ -364,7 +364,7 @@ module axis_debug_decoder #(
                     end
                     casez ({i_m_axis_tready, i_s_axis_tvalid, m_axis_tvalid_qq, m_axis_tvalid_q})
                         4'b0011,
-                        4'b000?: /* Do nothing */;
+                        4'b000?: ;
                         4'b??10: $error("m_axis_tvalid is 0, but m_axis_tvalid_qq.");
                         4'b0100: begin
                             if (s_axis_tready_q) begin
@@ -387,7 +387,7 @@ module axis_debug_decoder #(
                             end 
                         end
                         4'b0111: assert(!o_s_axis_tready); //Otherwise, we deleted data
-                        4'b1000: /*Do nothing*/;
+                        4'b1000: ;
                         4'b1001: begin //Send over what is in the buffer, but the 2buffer not valid -
                             m_axis_tvalid_q <= 1'b0;
                             s_axis_tready_q <= 1'b1;

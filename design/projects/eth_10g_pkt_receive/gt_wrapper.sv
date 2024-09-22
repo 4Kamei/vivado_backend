@@ -3,12 +3,16 @@
 `timescale 1ns / 1ps
 
 module gt_wrapper #(
-        parameter int RX_DATA_WIDTH = 64
+        parameter int RX_DATA_WIDTH = 64,
+        parameter int TX_DATA_WIDTH = 64
     ) (
-        input  wire             i_refclk,
+        input  wire             i_qpll_clk,
+        input  wire             i_qpll_refclk, 
+
         input  wire             i_rx_usrclk,
         input  wire             i_rx_usrclk2,
         output wire             o_rxout_clk,
+        output wire             o_txout_clk,
         
         input  wire             i_lpm_reset,
         input  wire             i_gtx_rx_reset,
@@ -21,20 +25,34 @@ module gt_wrapper #(
                 
         input  wire             i_rx_polarity,
         
-        output wire [RX_DATA_WIDTH-1:0]      o_rxdata,
-        output wire             o_rxdatavaild,
-        output wire [1:0]       o_rxheader,
-        output wire             o_rxheader_valid,
-        output wire             o_rxstartofseq,
-        output wire [2:0]       o_rx_status,
-        output wire             o_rx_reset_done
+        output wire [RX_DATA_WIDTH-1:0]     o_rxdata,
+        output wire                         o_rxdata_valid,
+        output wire [1:0]                   o_rxheader,
+        output wire                         o_rxheader_valid,
+        output wire                         o_rxstartofseq,
+        output wire [2:0]                   o_rx_status,
+        output wire                         o_rx_reset_done,
+
+        output wire             o_tx_gearbox_ready,
+        output wire             o_tx_reset_done,
+
+        output wire             o_tx_p,
+        output wire             o_tx_n
+
     );
-    
+
     logic rxout_clk;
     //BUFG/BUFH ?   UG472 P113
-    BUFG BUFG_u (
+    BUFG BUFG_rxout_clk_u (
         .I(rxout_clk),
         .O(o_rxout_clk)
+    );
+    
+    logic txout_clk;
+    //BUFG/BUFH ?   UG472 P113
+    BUFG BUFG_txout_clk_u (
+        .I(txout_clk),
+        .O(o_txout_clk)
     );
 
     localparam logic [2:0] CPLLREFCLKSEL = 3'b001;
@@ -42,10 +60,27 @@ module gt_wrapper #(
     //These are for 64B/67B, rather than 64B/66B
     logic rxheader_unused;
 
-    logic [63:0] rxdata; 
+    logic [RX_DATA_WIDTH-1:0] rxdata; 
     
     //Using RX_DATA_WIDTH lowest bits
     assign o_rxdata = rxdata[RX_DATA_WIDTH-1:0];
+    
+    // synthesis translate_off
+`define SIMULATION
+    // synthesis translate_on
+
+`ifdef SIMULATION
+
+    assign rxout_clk = i_refclk;
+    assign o_rxdata = RX_DATA_WIDTH'(1'b0);
+    assign o_rxdata_valid = 1'b0;
+    assign o_rxheader_valid = 1'b0;
+    assign o_rxheader = 2'b00;
+    assign o_rxstartofseq = 1'b0;
+    assign o_rx_status = 3'b000;
+    assign o_rx_reset_done = 1'b0;
+
+`else
 
     //------------------------- GT Instantiations  --------------------------
         GTXE2_CHANNEL #
@@ -178,8 +213,8 @@ module gt_wrapper #(
 
            //-----------------------RX Gearbox Attributes---------------------------
             .RXGEARBOX_EN                           ("TRUE"),
-            .GEARBOX_MODE                           (3'b001),
-
+            .GEARBOX_MODE                           (3'b011),
+            
            //-----------------------PRBS Detection Attribute-----------------------
             .RXPRBS_ERR_LOOPBACK                    (1'b0),
 
@@ -216,7 +251,7 @@ module gt_wrapper #(
             .TX_XCLK_SEL                            ("TXUSR"),
 
            //-----------------------FPGA TX Interface Attributes-------------------------
-            .TX_DATA_WIDTH                          (32),
+            .TX_DATA_WIDTH                          (TX_DATA_WIDTH),
 
            //-----------------------TX Configurable Driver Attributes-------------------------
             .TX_DEEMPH0                             (5'b00000),
@@ -323,7 +358,7 @@ module gt_wrapper #(
         .GTGREFCLK                      (1'b0),
         .GTNORTHREFCLK0                 (1'b0),
         .GTNORTHREFCLK1                 (1'b0),
-        .GTREFCLK0                      (i_refclk),
+        .GTREFCLK0                      (1'b0),
         .GTREFCLK1                      (1'b0),
         .GTSOUTHREFCLK0                 (1'b0),
         .GTSOUTHREFCLK1                 (1'b0),
@@ -337,9 +372,9 @@ module gt_wrapper #(
         .DRPWE                          (1'b0),
         //----------------------------- Clocking Ports -----------------------------
         .GTREFCLKMONITOR                (/* GTREFCLKMONITOR */),
-        .QPLLCLK                        (/* Left Floating */),
-        .QPLLREFCLK                     (/* Left Floating */),
-        .RXSYSCLKSEL                    (2'b00),
+        .QPLLCLK                        (i_qpll_clk),
+        .QPLLREFCLK                     (i_qpll_refclk),
+        .RXSYSCLKSEL                    (2'b11),    //Choose the reference clocks from the COMMON QPLL
         .TXSYSCLKSEL                    (2'b11),    //TODO FIXME
         //------------------------- Digital Monitor Ports --------------------------
         .DMONITOROUT                    (/* Unused */),
@@ -379,7 +414,7 @@ module gt_wrapper #(
         .RXUSRCLK2                      (i_rx_usrclk2),
         //---------------- Receive Ports - FPGA RX interface Ports -----------------
         .RXDATA                         (rxdata),
-        .RXDATAVALID                    (o_rxdatavaild),
+        .RXDATAVALID                    (o_rxdata_valid),
         .RXGEARBOXSLIP                  (i_rxslip),
         .RXHEADER                       ({rxheader_unused, o_rxheader}),
         .RXHEADERVALID                  (o_rxheader_valid),
@@ -564,26 +599,26 @@ module gt_wrapper #(
         .TXMAINCURSOR                   (5'b00000),
         .TXPISOPD                       (1'b0),
         //---------------- Transmit Ports - TX Data Path interface -----------------
-        .TXDATA                         (32'h00000000),
+        .TXDATA                         (64'h0),
         //-------------- Transmit Ports - TX Driver and OOB signaling --------------
-        .GTXTXN                         (/* Unused */),
-        .GTXTXP                         (/* Unused */),
+        .GTXTXN                         (o_tx_n),
+        .GTXTXP                         (o_tx_p),
         //--------- Transmit Ports - TX Fabric Clock Output Control Ports ----------
-        .TXOUTCLK                       (/* Unused */),
+        .TXOUTCLK                       (txout_clk),
         .TXOUTCLKFABRIC                 (/* Unused */),
         .TXOUTCLKPCS                    (/* Unused */),
         .TXOUTCLKSEL                    (3'b011),
         .TXRATEDONE                     (/* Unused */),
         //------------------- Transmit Ports - TX Gearbox Ports --------------------
         .TXCHARISK                      (8'h00),
-        .TXGEARBOXREADY                 (/* Unused */),
-        .TXHEADER                       (3'b000),
+        .TXGEARBOXREADY                 (o_tx_gearbox_ready),
+        .TXHEADER                       (3'b010),              
         .TXSEQUENCE                     (7'b0000000),
         .TXSTARTSEQ                     (1'b0),
         //----------- Transmit Ports - TX Initialization and Reset Ports -----------
         .TXPCSRESET                     (1'b0),
         .TXPMARESET                     (1'b0),
-        .TXRESETDONE                    (/* Unused */),
+        .TXRESETDONE                    (o_tx_reset_done),
         //---------------- Transmit Ports - TX OOB signalling Ports ----------------
         .TXCOMFINISH                    (/* Unused */),
         .TXCOMINIT                      (1'b0),
@@ -599,10 +634,12 @@ module gt_wrapper #(
         //---------------- Transmit Ports - pattern Generator Ports ----------------
         .TXPRBSSEL                      (3'b000),
         //--------------------- Tx Configurable Driver  Ports ----------------------
-        .TXQPISENN                      (/* Unused */),
-        .TXQPISENP                      (/* Unused */)
+        .TXQPISENN                      (/* Unconnected */),
+        .TXQPISENP                      (/* Unconnected */)
 
     );
+
+`endif
 
 endmodule
 

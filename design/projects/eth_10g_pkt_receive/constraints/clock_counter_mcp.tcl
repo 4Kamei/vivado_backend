@@ -8,14 +8,14 @@ if {$CONS_MODE == "SET"} {
     set from [get_pins clock_counter_ad_ref_u/clock_counter_u/clk_counter_extern_reg*/C]
     set to [get_pins clock_counter_ad_ref_u/clock_counter_u/clk_extern_counter_local_q_reg*/D]
 
-    set_false_path -from $from -to $to -hold
-    set_false_path -from $from -to $to -setup
+ #   set_false_path -from $from -to $to -hold
+ #   set_false_path -from $from -to $to -setup
 
     set from [get_pins clock_counter_ad_rx_u/clock_counter_u/clk_counter_extern_reg*/C]
     set to [get_pins clock_counter_ad_rx_u/clock_counter_u/clk_extern_counter_local_q_reg*/D]
 
-    set_false_path -from $from -to $to -hold
-    set_false_path -from $from -to $to -setup
+#    set_false_path -from $from -to $to -hold
+#    set_false_path -from $from -to $to -setup
 }
 
 if {$CONS_MODE == "TEST"} {

@@ -1,10 +1,12 @@
-TOPLEVEL = clock_counter_test
+TOPLEVEL = eth_10g_pkt_receive
 
 TOPLEVEL_LANG = verilog
 VERILOG_SOURCES = ${PROJ_ROOT}/design/sources/*.sv
+VERILOG_SOURCES += ${PROJ_ROOT}/design/sources/*/*.sv
 VERILOG_SOURCES += ${PROJ_ROOT}/design/projects/${TOPLEVEL}/*.sv
 VERILOG_SOURCES += ${PROJ_ROOT}/design/primitives/*.sv
-MODULE = ${TOPLEVEL}
+MODULE = test_i2c_programming
+
 SIM = verilator
 EXTRA_ARGS += "--trace"
 EXTRA_ARGS += "--trace-structs"

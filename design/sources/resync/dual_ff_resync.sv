@@ -1,6 +1,7 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
+(* DONT_TOUCH = "yes" *)
 module dual_ff_resync #(
         parameter RESET_VALUE = 1'b0
     ) (
@@ -10,11 +11,11 @@ module dual_ff_resync #(
         input wire i_signal,
         output wire o_signal
     );
-
+    
     logic flop_q;
     logic flop_q_q;
-        
-    always @(posedge i_clk or negedge i_rst_n) begin
+
+    always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
             flop_q <= RESET_VALUE;
             flop_q_q <= RESET_VALUE;

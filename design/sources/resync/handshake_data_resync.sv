@@ -6,6 +6,7 @@
 //future). The purpose is to be easily found in the design and constrained
 //correctly
 
+(* DONT_TOUCH = "yes" *)
 module handshake_data_resync #(
         parameter int DATA_WIDTH = 1
     ) (

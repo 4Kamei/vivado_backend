@@ -83,25 +83,33 @@ module i2c_master_ad #(
     logic       i2c_ready_q;
 
     always_comb ad_read_data = i2c_read_data;
+    
+    logic       can_read;
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
             i2c_ready_q <= 1'b0;
+            can_read <= 1'b0;
         end else begin
             i2c_ready_q <= i2c_ready;
             ad_output_valid <= {i2c_ready, i2c_ready_q} == 2'b10;
+            if (ad_output_valid) begin
+                can_read <= 1'b1;
+            end
             i2c_we <= 1'b0;
             i2c_re <= 1'b0;
-            if (ad_write_request && i2c_ready) begin
+            if (ad_write_request && can_read) begin
                 i2c_slave_address <= ad_rw_address[14:8];
                 i2c_rw_address    <= ad_rw_address[7 :0];
                 i2c_write_data    <= ad_write_data;
                 i2c_we            <= 1'b1;
+                can_read          <= 1'b0;
             end
-            if (ad_read_request && i2c_ready) begin
+            if (ad_read_request && can_read) begin
                 i2c_slave_address <= ad_rw_address[14:8];
                 i2c_rw_address    <= ad_rw_address[7 :0];
                 i2c_re            <= 1'b1;
+                can_read          <= 1'b0;
             end
         end
     end
