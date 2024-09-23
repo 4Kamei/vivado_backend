@@ -398,12 +398,19 @@ module eth_10g_pkt_receive #(
     logic [2:0]     gtx_sfp1_rx_status;
     logic           gtx_sfp1_rx_reset_done;
     
-    (*MARK_DEBUG = "TRUE" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
-    (*MARK_DEBUG = "TRUE" *) logic [1:0]     gtx_sfp1_rx_header_q;
-    (*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_datavalid_q;
-    (*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_headervalid_q;
-    (*MARK_DEBUG = "TRUE" *) logic [2:0]     gtx_sfp1_rx_status_q;
-    (*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_reset_done_q;
+    //(*MARK_DEBUG = "TRUE" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
+    //(*MARK_DEBUG = "TRUE" *) logic [1:0]     gtx_sfp1_rx_header_q;
+    //(*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_datavalid_q;
+    //(*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_headervalid_q;
+    //(*MARK_DEBUG = "TRUE" *) logic [2:0]     gtx_sfp1_rx_status_q;
+    //(*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_reset_done_q;
+    
+    logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
+    logic [1:0]     gtx_sfp1_rx_header_q;
+    logic           gtx_sfp1_rx_datavalid_q;
+    logic           gtx_sfp1_rx_headervalid_q;
+    logic [2:0]     gtx_sfp1_rx_status_q;
+    logic           gtx_sfp1_rx_reset_done_q;
    
     //For debug purposes
     always_ff @(posedge clk_gtx_rx) begin    
@@ -421,15 +428,57 @@ module eth_10g_pkt_receive #(
 
     logic clk_qpll;
     logic clk_qpll_ref;
-    logic qpll_ref_clk_lost;
     logic qpll_lock;
     logic gtx_sfp1_tx_gearbox_ready;
     logic gtx_sfp1_tx_reset_done;
 
     assign o_eth_led[3] = gtx_sfp1_rx_reset_done;
-    assign o_eth_led[2] = i_gtx_sfp1_loss;
-    assign o_eth_led[1] = gtx_sfp1_tx_gearbox_ready;
-    assign o_eth_led[0] = gtx_sfp1_tx_reset_done;
+    assign o_eth_led[2] = gtx_sfp1_tx_reset_done;
+    //assign o_eth_led[1] = gtx_sfp1_tx_gearbox_ready;
+    //assign o_eth_led[0] = gtx_sfp1_tx_reset_done;
+    assign {o_eth_led[1], o_eth_led[0]} = reset_fsm_state;
+
+    //RESET FSM. //TODO REFACTOR
+    typedef enum logic [1:0] {PLL_RESET, GTX_RESET, USR_RDY, DONE} reset_fsm_t;
+    reset_fsm_t reset_fsm_state;
+    
+    logic reset_fsm_qpll_reset;
+    logic reset_fsm_gtx_reset;
+    logic reset_fsm_userrdy;
+        
+    always_ff @(posedge clk_logic or negedge i_rst_n) begin
+        if (!i_rst_n) begin
+            reset_fsm_state <= PLL_RESET;
+            reset_fsm_qpll_reset <= 1'b1;
+            reset_fsm_gtx_reset <= 1'b1;
+            reset_fsm_userrdy <= 1'b0;
+        end else begin
+            case (reset_fsm_state)
+                PLL_RESET: begin
+                    reset_fsm_state <= GTX_RESET;
+                    reset_fsm_qpll_reset <= 1'b1;
+                    reset_fsm_gtx_reset <= 1'b1;
+                end
+                GTX_RESET: begin
+                    reset_fsm_qpll_reset <= 1'b0;
+                    if (qpll_lock) begin
+                        reset_fsm_state <= USR_RDY;
+                        reset_fsm_gtx_reset <= 1'b0;
+                    end
+                end
+                USR_RDY: begin
+                    reset_fsm_userrdy <= 1'b1;
+                    if (gtx_sfp1_rx_reset_done & gtx_sfp1_tx_reset_done) begin
+                        reset_fsm_state <= DONE;
+                    end
+                end
+                DONE: begin
+                    //* Do nothing *//
+                end
+                default: $error("Unreachable");
+            endcase
+        end
+    end
 
     GTXE2_COMMON #(
         //Set the PLL to multiply by 66, to get 156.25 to 10.3125
@@ -469,7 +518,7 @@ module eth_10g_pkt_receive #(
         .QPLLOUTRESET(1'b0),
         .QPLLPD(1'b0),
         .QPLLREFCLKLOST(/* Unused */),
-        .QPLLRESET(~i_rst_n),
+        .QPLLRESET(reset_fsm_qpll_reset),
         .BGBYPASSB(1'b1),
         .BGMONITORENB(1'b1),
         .BGPDB(1'b1),
@@ -482,14 +531,14 @@ module eth_10g_pkt_receive #(
     gtx_lane_0_u (    
         .i_qpll_clk(clk_qpll),
         .i_qpll_refclk(clk_qpll_ref),
-        .i_rx_usrclk(1'b0),
-        .i_rx_usrclk2(1'b0),
         .o_rxout_clk(clk_gtx_rx),
         .o_txout_clk(clk_gtx_tx),
         //Resets
-        .i_lpm_reset(!i_rst_n),
-        .i_gtx_rx_reset(!i_rst_n),
-        .i_gtx_tx_reset(!i_rst_n),
+        .i_lpm_reset(1'b0),
+        .i_gtx_rx_reset(reset_fsm_gtx_reset),
+        .i_gtx_rx_userrdy(reset_fsm_userrdy),
+        .i_gtx_tx_reset(reset_fsm_gtx_reset),
+        .i_gtx_tx_userrdy(reset_fsm_userrdy),
         //Lanes
         .i_rx_p(i_gtx_sfp1_rx_p),
         .i_rx_n(i_gtx_sfp1_rx_n),

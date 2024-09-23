@@ -8,15 +8,16 @@ module gt_wrapper #(
     ) (
         input  wire             i_qpll_clk,
         input  wire             i_qpll_refclk, 
-
-        input  wire             i_rx_usrclk,
-        input  wire             i_rx_usrclk2,
+      
         output wire             o_rxout_clk,
         output wire             o_txout_clk,
         
         input  wire             i_lpm_reset,
         input  wire             i_gtx_rx_reset,
         input  wire             i_gtx_tx_reset,
+        input  wire             i_gtx_rx_userrdy,
+        input  wire             i_gtx_tx_userrdy,
+
 
         input  wire             i_rx_p,
         input  wire             i_rx_n,
@@ -40,6 +41,21 @@ module gt_wrapper #(
         output wire             o_tx_n
 
     );
+
+    logic rx_usrclk;
+    logic rx_usrclk2;
+    logic tx_usrclk;
+    logic tx_usrclk2;
+
+    if (RX_DATA_WIDTH == 32) begin
+        always_comb rx_usrclk  = o_txout_clk;
+        always_comb rx_usrclk2 = o_txout_clk;
+        always_comb tx_usrclk  = o_rxout_clk;
+        always_comb tx_usrclk2 = o_rxout_clk;
+    end else begin
+        $error("Configuration not supported usrclk2 should be half the rate of usrclk?");
+    end
+
 
     logic rxout_clk;
     //BUFG/BUFH ?   UG472 P113
@@ -71,7 +87,7 @@ module gt_wrapper #(
 
 `ifdef SIMULATION
 
-    assign rxout_clk = i_refclk;
+    assign rxout_clk = i_qpll_refclk;
     assign o_rxdata = RX_DATA_WIDTH'(1'b0);
     assign o_rxdata_valid = 1'b0;
     assign o_rxheader_valid = 1'b0;
@@ -375,7 +391,7 @@ module gt_wrapper #(
         .QPLLCLK                        (i_qpll_clk),
         .QPLLREFCLK                     (i_qpll_refclk),
         .RXSYSCLKSEL                    (2'b11),    //Choose the reference clocks from the COMMON QPLL
-        .TXSYSCLKSEL                    (2'b11),    //TODO FIXME
+        .TXSYSCLKSEL                    (2'b11),    //
         //------------------------- Digital Monitor Ports --------------------------
         .DMONITOROUT                    (/* Unused */),
         //--------------- FPGA TX Interface Datapath Configuration  ----------------
@@ -393,7 +409,7 @@ module gt_wrapper #(
         .SETERRSTATUS                   (1'b0),
         //------------------- RX Initialization and Reset Ports --------------------
         .EYESCANRESET                   (1'b0),
-        .RXUSERRDY                      (1'b0),
+        .RXUSERRDY                      (i_gtx_rx_userrdy),
         //------------------------ RX Margin Analysis Ports ------------------------
         .EYESCANDATAERROR               (/* Unused */),
         .EYESCANMODE                    (1'b0),
@@ -410,8 +426,8 @@ module gt_wrapper #(
         //-------- Receive Ports - FPGA RX Interface Datapath Configuration --------
         .RX8B10BEN                      (1'b0),
         //---------------- Receive Ports - FPGA RX Interface Ports -----------------
-        .RXUSRCLK                       (i_rx_usrclk),
-        .RXUSRCLK2                      (i_rx_usrclk2),
+        .RXUSRCLK                       (rx_usrclk),
+        .RXUSRCLK2                      (rx_usrclk2),
         //---------------- Receive Ports - FPGA RX interface Ports -----------------
         .RXDATA                         (rxdata),
         .RXDATAVALID                    (o_rxdata_valid),
@@ -555,7 +571,7 @@ module gt_wrapper #(
         .CFGRESET                       (1'b0),
         .GTTXRESET                      (i_gtx_tx_reset),
         .PCSRSVDOUT                     (/* Unused */),
-        .TXUSERRDY                      (1'b0),
+        .TXUSERRDY                      (i_gtx_tx_userrdy),
         //-------------------- Transceiver Reset Mode Operation --------------------
         .GTRESETSEL                     (1'b0),
         .RESETOVRD                      (1'b0),
@@ -563,8 +579,8 @@ module gt_wrapper #(
         .TXCHARDISPMODE                 (8'h00),
         .TXCHARDISPVAL                  (8'h00),
         //---------------- Transmit Ports - FPGA TX Interface Ports ----------------
-        .TXUSRCLK                       (1'b0),
-        .TXUSRCLK2                      (1'b0),
+        .TXUSRCLK                       (tx_usrclk),
+        .TXUSRCLK2                      (tx_usrclk2),
         //------------------- Transmit Ports - PCI Express Ports -------------------
         .TXELECIDLE                     (1'b0),
         .TXMARGIN                       (3'b000),
