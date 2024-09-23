@@ -398,12 +398,12 @@ module eth_10g_pkt_receive #(
     logic [2:0]     gtx_sfp1_rx_status;
     logic           gtx_sfp1_rx_reset_done;
     
-    //(*MARK_DEBUG = "TRUE" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
-    //(*MARK_DEBUG = "TRUE" *) logic [1:0]     gtx_sfp1_rx_header_q;
-    //(*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_datavalid_q;
-    //(*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_headervalid_q;
-    //(*MARK_DEBUG = "TRUE" *) logic [2:0]     gtx_sfp1_rx_status_q;
-    //(*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_reset_done_q;
+    (*MARK_DEBUG = "TRUE" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
+    (*MARK_DEBUG = "TRUE" *) logic [1:0]     gtx_sfp1_rx_header_q;
+    (*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_datavalid_q;
+    (*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_headervalid_q;
+    (*MARK_DEBUG = "TRUE" *) logic [2:0]     gtx_sfp1_rx_status_q;
+    (*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_reset_done_q;
     
     logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
     logic [1:0]     gtx_sfp1_rx_header_q;
@@ -433,10 +433,10 @@ module eth_10g_pkt_receive #(
     logic gtx_sfp1_tx_reset_done;
 
     assign o_eth_led[3] = gtx_sfp1_rx_reset_done;
-    assign o_eth_led[2] = gtx_sfp1_tx_reset_done;
-    //assign o_eth_led[1] = gtx_sfp1_tx_gearbox_ready;
-    //assign o_eth_led[0] = gtx_sfp1_tx_reset_done;
-    assign {o_eth_led[1], o_eth_led[0]} = reset_fsm_state;
+    assign o_eth_led[2] = i_gtx_sfp1_loss;
+    assign o_eth_led[1] = gtx_sfp1_tx_reset_done;
+    assign o_eth_led[0] = gtx_sfp1_tx_gearbox_ready;
+    //assign {o_eth_led[1], o_eth_led[0]} = reset_fsm_state;
 
     //RESET FSM. //TODO REFACTOR
     typedef enum logic [1:0] {PLL_RESET, GTX_RESET, USR_RDY, DONE} reset_fsm_t;
