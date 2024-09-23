@@ -467,4 +467,4 @@ module i2c_master #(
         end
     end
 
-endmodule;
+endmodule

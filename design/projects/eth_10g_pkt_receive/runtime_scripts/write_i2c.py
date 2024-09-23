@@ -22,6 +22,7 @@ def write_packet(data, expect_response=0):
         pkt.append(data)
     #response packet
     pkts = []
+    ser.timeout = 0.01
     while expect_response > 0:
         pkt_len = int.from_bytes(ser.read())
         pkt = []
@@ -51,8 +52,9 @@ print(f"Found devices: {i2c_devices}")
 #0x48
 type, id = i2c_devices[0]
 while True:
-    for i in range(255):
+    for i in range(127):
     #Write 1 to address 0
         print(i)
-        outputs = write_packet([0x01, 0x04, type, id] + [0b01001000, i], expect_response=0)
+        outputs = write_packet([0x01, 0x02, type, id] + [i, 0], expect_response=2)
         time.sleep(0.1)
+        print(outputs)
