@@ -9,6 +9,6 @@ set period_floor [expr int(1000 * $period)/1000.0]
 
 foreach clk_pin $clk_out_pins {
     create_clock -period $period_floor $clk_pin
-    set_clock_groups -asynchronous -group [list $clk_pin]
+    set_clock_groups -asynchronous -group [get_clocks $clk_pin]
 }
 
