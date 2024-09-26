@@ -4,6 +4,7 @@
 module eth_block_alignment (
         input wire i_clk,
         input wire [1:0] i_header,
+        input wire i_header_valid,
         input wire i_rst_n,
         output wire o_block_lock,
         output wire o_rxslip
@@ -46,21 +47,23 @@ module eth_block_alignment (
                     slip <= 1'b0;
                 end
                 TEST_SH: begin
-                    sh_total_count <= sh_total_count + 1'b1;
-                    if (sh_total_count == 7'd64 || sh_invalid_count == 7'd16) begin
-                        bl_state <= RESET_CNT;
-                        if(sh_invalid_count == 0) begin
-                            block_lock <= 1'b1;
-                        end
-                        if (sh_invalid_count == 7'd16 || ~sh_valid) begin
-                            block_lock <= 1'b0;
-                            bl_state <= SLIP;
-                            slip <= 1'b1;
-                            slip_counter <= 2'd3;
-                        end
-                    end else begin
-                        if(~sh_valid) begin
-                            sh_invalid_count <= sh_invalid_count + 1'b1;
+                    if (i_header_valid) begin
+                        sh_total_count <= sh_total_count + 1'b1;
+                        if (sh_total_count == 7'd64 || sh_invalid_count == 7'd16) begin
+                            bl_state <= RESET_CNT;
+                            if(sh_invalid_count == 0) begin
+                                block_lock <= 1'b1;
+                            end
+                            if (sh_invalid_count == 7'd16 || ~sh_valid) begin
+                                block_lock <= 1'b0;
+                                bl_state <= SLIP;
+                                slip <= 1'b1;
+                                slip_counter <= 2'd3;
+                            end
+                        end else begin
+                            if(~sh_valid) begin
+                                sh_invalid_count <= sh_invalid_count + 1'b1;
+                            end
                         end
                     end
                 end
