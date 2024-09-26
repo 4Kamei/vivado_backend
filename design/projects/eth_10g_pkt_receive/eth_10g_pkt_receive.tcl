@@ -40,6 +40,10 @@ set_clock_groups -group [get_clocks i_gtx_clk_p] -asynchronous
 set_property PACKAGE_PIN AG27 [get_ports i_rst_n]
 set_property IOSTANDARD LVCMOS33 [get_ports i_rst_n]
 
+#Key 2 user button
+set_property PACKAGE_PIN AG28 [get_ports i_key2]
+set_property IOSTANDARD LVCMOS33 [get_ports i_key2]
+
 #Debug Header
 set debug_header_pins {L27 J28 H29 K29}
 #------------------------
@@ -72,16 +76,16 @@ set_property PACKAGE_PIN AK26 [get_ports o_uart_tx]
 set_property IOSTANDARD LVCMOS33 [get_ports o_uart_tx]
 
 #SFP lane 1
-set_property PACKAGE_PIN K6 [get_ports i_gtx_sfp1_rx_p]
-set_property PACKAGE_PIN K5 [get_ports i_gtx_sfp1_rx_n]
+set_property PACKAGE_PIN H6 [get_ports i_gtx_sfp1_rx_p]
+set_property PACKAGE_PIN H5 [get_ports i_gtx_sfp1_rx_n]
 
-set_property PACKAGE_PIN K2 [get_ports o_gtx_sfp1_tx_p]
-set_property PACKAGE_PIN K1 [get_ports o_gtx_sfp1_tx_n]
+set_property PACKAGE_PIN J4 [get_ports o_gtx_sfp1_tx_p]
+set_property PACKAGE_PIN J3 [get_ports o_gtx_sfp1_tx_n]
 
-set_property PACKAGE_PIN T28 [get_ports o_gtx_sfp1_tx_disable]
+set_property PACKAGE_PIN T27 [get_ports o_gtx_sfp1_tx_disable]
 set_property IOSTANDARD LVCMOS33 [get_ports o_gtx_sfp1_tx_disable]
 
-set_property PACKAGE_PIN R28 [get_ports i_gtx_sfp1_loss]
+set_property PACKAGE_PIN T26 [get_ports i_gtx_sfp1_loss]
 set_property IOSTANDARD LVCMOS33 [get_ports i_gtx_sfp1_loss]
 
 #SI5338 configuration

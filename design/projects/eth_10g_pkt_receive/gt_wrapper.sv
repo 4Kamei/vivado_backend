@@ -1,4 +1,3 @@
-`resetall
 `default_nettype none
 `timescale 1ns / 1ps
 
@@ -11,6 +10,8 @@ module gt_wrapper #(
       
         output wire             o_rxout_clk,
         output wire             o_txout_clk,
+        output wire             o_txout_pcs_clk,
+        output wire             o_txout_fabric_clk,
         
         input  wire             i_lpm_reset,
         input  wire             i_gtx_rx_reset,
@@ -18,7 +19,9 @@ module gt_wrapper #(
         input  wire             i_gtx_rx_userrdy,
         input  wire             i_gtx_tx_userrdy,
 
-
+        input  wire             i_tx_pma_reset,
+        input  wire             i_tx_pcs_reset,
+        
         input  wire             i_rx_p,
         input  wire             i_rx_n,
         
@@ -33,9 +36,14 @@ module gt_wrapper #(
         output wire                         o_rxstartofseq,
         output wire [2:0]                   o_rx_status,
         output wire                         o_rx_reset_done,
+        output wire [2:0]                   o_tx_bufstatus,
+
 
         output wire             o_tx_gearbox_ready,
         output wire             o_tx_reset_done,
+
+        input  wire             i_tx_sequence,
+        input  wire             i_tx_start_seq,
 
         output wire             o_tx_p,
         output wire             o_tx_n
@@ -46,15 +54,17 @@ module gt_wrapper #(
     logic rx_usrclk2;
     logic tx_usrclk;
     logic tx_usrclk2;
-
-    if (RX_DATA_WIDTH == 32) begin
-        always_comb rx_usrclk  = o_txout_clk;
-        always_comb rx_usrclk2 = o_txout_clk;
-        always_comb tx_usrclk  = o_rxout_clk;
-        always_comb tx_usrclk2 = o_rxout_clk;
-    end else begin
-        $error("Configuration not supported usrclk2 should be half the rate of usrclk?");
-    end
+    
+    generate
+        if (RX_DATA_WIDTH == 32) begin
+            always_comb rx_usrclk  = o_txout_clk;
+            always_comb rx_usrclk2 = o_txout_clk;
+            always_comb tx_usrclk  = o_txout_clk;
+            always_comb tx_usrclk2 = o_txout_clk;
+        end else begin
+            $error("Configuration not supported usrclk2 should be half the rate of usrclk?");
+        end
+    endgenerate
 
 
     logic rxout_clk;
@@ -69,6 +79,20 @@ module gt_wrapper #(
     BUFG BUFG_txout_clk_u (
         .I(txout_clk),
         .O(o_txout_clk)
+    );
+    
+    logic txout_pcs_clk;
+    //BUFG/BUFH ?   UG472 P113
+    BUFG BUFG_txout_pcs_clk_u (
+        .I(txout_pcs_clk),
+        .O(o_txout_pcs_clk)
+    );
+
+    logic txout_fabric_clk;
+    //BUFG/BUFH ?   UG472 P113
+    BUFG BUFG_txout_fabric_clk_u (
+        .I(txout_fabric_clk),
+        .O(o_txout_fabric_clk)
     );
 
     localparam logic [2:0] CPLLREFCLKSEL = 3'b001;
@@ -182,8 +206,8 @@ module gt_wrapper #(
            //-------------------------PMA Attributes----------------------------
             .OUTREFCLK_SEL_INV                      (2'b11),
             .PMA_RSV                                (32'h001E_7080),
-            .PMA_RSV2                               (16'h2050),
-            .PMA_RSV3                               (2'b00),
+            .PMA_RSV2                               (16'h2050),     //OR 2050?
+            .PMA_RSV3                               (2'b00),        
             .PMA_RSV4                               (32'h00000000),
             .RX_BIAS_CFG                            (12'b000000000100),
             //P96 says to set to 008101 not A00?
@@ -195,15 +219,15 @@ module gt_wrapper #(
             .TERM_RCAL_CFG                          (5'b10000),
             .TERM_RCAL_OVRD                         (1'b0),
             .TST_RSV                                (32'h00000000),
-            .RX_CLK25_DIV                           (13),
-            .TX_CLK25_DIV                           (13),
+            .RX_CLK25_DIV                           (6),                //Was previously 13?
+            .TX_CLK25_DIV                           (6),                //Was previously 13?
             .UCODEER_CLR                            (1'b0),
 
            //-------------------------PCI Express Attributes----------------------------
             .PCS_PCIE_EN                            ("FALSE"),
 
            //-------------------------PCS Attributes----------------------------
-            .PCS_RSVD_ATTR                          (3'b100),
+            .PCS_RSVD_ATTR                          (48'h000000000000),
 
            //-----------RX Buffer Attributes------------
             .RXBUF_EN                               ("FALSE"),
@@ -229,7 +253,7 @@ module gt_wrapper #(
 
            //-----------------------RX Gearbox Attributes---------------------------
             .RXGEARBOX_EN                           ("TRUE"),
-            .GEARBOX_MODE                           (3'b011),
+            .GEARBOX_MODE                           (3'b001),
             
            //-----------------------PRBS Detection Attribute-----------------------
             .RXPRBS_ERR_LOOPBACK                    (1'b0),
@@ -256,7 +280,7 @@ module gt_wrapper #(
             .TRANS_TIME_RATE                        (8'h0E),
 
            //------------TX Buffer Attributes----------------
-            .TXBUF_EN                               ("FALSE"),
+            .TXBUF_EN                               ("TRUE"),
             .TXBUF_RESET_ON_RATE_CHANGE             ("TRUE"),
             .TXDLY_CFG                              (16'h001F),
             .TXDLY_LCFG                             (9'h030),
@@ -264,7 +288,7 @@ module gt_wrapper #(
             .TXPH_CFG                               (16'h0780),
             .TXPHDLY_CFG                            (24'h084020),
             .TXPH_MONITOR_SEL                       (5'b00000),
-            .TX_XCLK_SEL                            ("TXUSR"),
+            .TX_XCLK_SEL                            ("TXOUT"),
 
            //-----------------------FPGA TX Interface Attributes-------------------------
             .TX_DATA_WIDTH                          (TX_DATA_WIDTH),
@@ -275,7 +299,7 @@ module gt_wrapper #(
             .TX_EIDLE_ASSERT_DELAY                  (3'b110),
             .TX_EIDLE_DEASSERT_DELAY                (3'b100),
             .TX_LOOPBACK_DRIVE_HIZ                  ("FALSE"),
-            .TX_MAINCURSOR_SEL                      (1'b1),
+            .TX_MAINCURSOR_SEL                      (1'b0),
             .TX_DRIVE_MODE                          ("DIRECT"),
             .TX_MARGIN_FULL_0                       (7'b1001110),
             .TX_MARGIN_FULL_1                       (7'b1001001),
@@ -322,7 +346,7 @@ module gt_wrapper #(
             .RX_DFE_H4_CFG                          (11'b00011110000),
             .RX_DFE_H5_CFG                          (11'b00011100000),
             .RX_DFE_KL_CFG                          (13'b0000011111110),
-            .RX_DFE_LPM_CFG                         (16'h0104),
+            .RX_DFE_LPM_CFG                         (16'h0954),
             .RX_DFE_LPM_HOLD_DURING_EIDLE           (1'b0),
             .RX_DFE_UT_CFG                          (17'b10001111000000000),
             .RX_DFE_VP_CFG                          (17'b00011111100000011),
@@ -341,7 +365,7 @@ module gt_wrapper #(
             .TX_QPI_STATUS_EN                       (1'b0),
 
            //-----------------------RX Equalizer Attributes--------------------------
-            .RX_DFE_KL_CFG2                         (13'b0000000000000),
+            .RX_DFE_KL_CFG2                         (32'h301148AC),
             .RX_DFE_XYD_CFG                         (13'b0000000000000),
 
            //-----------------------TX Configurable Driver Attributes--------------------------
@@ -397,7 +421,7 @@ module gt_wrapper #(
         //--------------- FPGA TX Interface Datapath Configuration  ----------------
         .TX8B10BEN                      (1'b0),
         //----------------------------- Loopback Ports -----------------------------
-        .LOOPBACK                       (3'b000),
+        .LOOPBACK                       (3'b010),       //010 -> Near end PMA loopback
         //--------------------------- PCI Express Ports ----------------------------
         .PHYSTATUS                      (/* Unused */),
         .RXRATE                         (3'b000),
@@ -584,12 +608,12 @@ module gt_wrapper #(
         //------------------- Transmit Ports - PCI Express Ports -------------------
         .TXELECIDLE                     (1'b0),
         .TXMARGIN                       (3'b000),
-        .TXRATE                         (3'b001),
+        .TXRATE                         (3'b000),
         .TXSWING                        (1'b0),
         //---------------- Transmit Ports - Pattern Generator Ports ----------------
         .TXPRBSFORCEERR                 (1'b0),
         //---------------- Transmit Ports - TX Buffer Bypass Ports -----------------
-        .TXDLYBYPASS                    (1'b0),
+        .TXDLYBYPASS                    (1'b1),
         .TXDLYEN                        (1'b0),
         .TXDLYHOLD                      (1'b0),
         .TXDLYOVRDEN                    (1'b0),
@@ -605,7 +629,7 @@ module gt_wrapper #(
         .TXPHINITDONE                   (/* Unused */),
         .TXPHOVRDEN                     (1'b0),
         //-------------------- Transmit Ports - TX Buffer Ports --------------------
-        .TXBUFSTATUS                    (/* Unused */),
+        .TXBUFSTATUS                    (o_tx_bufstatus),
         //------------- Transmit Ports - TX Configurable Driver Ports --------------
         .TXBUFDIFFCTRL                  (3'b100),
         .TXDEEMPH                       (1'b0),
@@ -621,19 +645,19 @@ module gt_wrapper #(
         .GTXTXP                         (o_tx_p),
         //--------- Transmit Ports - TX Fabric Clock Output Control Ports ----------
         .TXOUTCLK                       (txout_clk),
-        .TXOUTCLKFABRIC                 (/* Unused */),
-        .TXOUTCLKPCS                    (/* Unused */),
-        .TXOUTCLKSEL                    (3'b011),
+        .TXOUTCLKFABRIC                 (txout_fabric_clk),
+        .TXOUTCLKPCS                    (txout_pcs_clk),
+        .TXOUTCLKSEL                    (3'b010),
         .TXRATEDONE                     (/* Unused */),
         //------------------- Transmit Ports - TX Gearbox Ports --------------------
         .TXCHARISK                      (8'h00),
         .TXGEARBOXREADY                 (o_tx_gearbox_ready),
         .TXHEADER                       (3'b010),              
-        .TXSEQUENCE                     (7'b0000000),
-        .TXSTARTSEQ                     (1'b0),
+        .TXSEQUENCE                     (/* Unused */),
+        .TXSTARTSEQ                     (i_tx_start_seq),
         //----------- Transmit Ports - TX Initialization and Reset Ports -----------
-        .TXPCSRESET                     (1'b0),
-        .TXPMARESET                     (1'b0),
+        .TXPCSRESET                     (i_tx_pma_reset),
+        .TXPMARESET                     (i_tx_pcs_reset),
         .TXRESETDONE                    (o_tx_reset_done),
         //---------------- Transmit Ports - TX OOB signalling Ports ----------------
         .TXCOMFINISH                    (/* Unused */),
@@ -646,7 +670,7 @@ module gt_wrapper #(
         //------------- Transmit Ports - TX Receiver Detection Ports  --------------
         .TXDETECTRX                     (1'b0),
         //---------------- Transmit Ports - TX8b/10b Encoder Ports -----------------
-        .TX8B10BBYPASS                  (8'h00),
+        .TX8B10BBYPASS                  (8'hff),
         //---------------- Transmit Ports - pattern Generator Ports ----------------
         .TXPRBSSEL                      (3'b000),
         //--------------------- Tx Configurable Driver  Ports ----------------------

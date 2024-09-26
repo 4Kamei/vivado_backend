@@ -1,5 +1,5 @@
 #Clock constraints
-set clk_out_pins [get_pins gtx_lane*/*/*OUTCLK]
+set clk_out_pins [get_pins gtx_lane*/*/*OUTCLK*]
 
 
 set DATAPATH_WIDTH 64

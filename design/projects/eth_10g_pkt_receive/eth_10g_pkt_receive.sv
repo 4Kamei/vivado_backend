@@ -34,6 +34,9 @@ module eth_10g_pkt_receive #(
         input  wire i_pcie_clk_n,
         
         input  wire i_rst_n,
+
+        input  wire i_key2,
+
         input  wire i_uart_rx,
         output wire o_uart_tx,
 
@@ -49,6 +52,9 @@ module eth_10g_pkt_receive #(
         output wire [3:0] o_eth_led
     );
 
+//We need to define a 'debug_parameters' file, which holds the addresses of
+//each of the devices on the debug bus so that we can map ID -> device 
+`include "axis_debug_device_ids.sv"
 
     assign o_debug[0] = i2c_i_sda;
     assign o_debug[1] = i2c_i_scl;
@@ -168,8 +174,7 @@ module eth_10g_pkt_receive #(
     logic clock_counter_s_axis_tlast;
 
     clock_counter_ad #(
-        .AXIS_DEVICE_TYPE(8'h01),
-        .AXIS_DEVICE_ID(8'h00)) 
+        .AXIS_DEVICE_ID(AXIS_DEBUG_IDS_CLK_LOGIC)) 
     clock_counter_ad_logic_u (
         .i_clk(clk_logic),
         .i_clk_extern(clk_logic),
@@ -194,8 +199,7 @@ module eth_10g_pkt_receive #(
     logic clock_counter_2_s_axis_tlast;
     
     clock_counter_ad #(
-        .AXIS_DEVICE_TYPE(8'h01),
-        .AXIS_DEVICE_ID(8'h01)) 
+        .AXIS_DEVICE_ID(AXIS_DEBUG_IDS_CLK_QSFP)) 
     clock_counter_ad_gtx_qsfp_u (
         .i_clk(clk_logic),
         .i_clk_extern(clk_gtx_qsfp),
@@ -220,8 +224,7 @@ module eth_10g_pkt_receive #(
     logic clock_counter_3_s_axis_tlast;
     
     clock_counter_ad #(
-        .AXIS_DEVICE_TYPE(8'h01),
-        .AXIS_DEVICE_ID(8'h02)) 
+        .AXIS_DEVICE_ID(AXIS_DEBUG_IDS_CLK_GTX_REF)) 
     clock_counter_ad_gtx_u (
         .i_clk(clk_logic),
         .i_clk_extern(clk_gtx),
@@ -246,8 +249,7 @@ module eth_10g_pkt_receive #(
     logic clock_counter_4_s_axis_tlast;
     
     clock_counter_ad #(
-        .AXIS_DEVICE_TYPE(8'h01),
-        .AXIS_DEVICE_ID(8'h03)) 
+        .AXIS_DEVICE_ID(AXIS_DEBUG_IDS_CLK_GTX_TX)) 
     clock_counter_ad_gtx_tx_u (
         .i_clk(clk_logic),
         .i_clk_extern(clk_gtx_tx),
@@ -270,13 +272,12 @@ module eth_10g_pkt_receive #(
     logic clock_counter_5_s_axis_tready;
     logic [UART_DEBUG_BUS_AXIS_WIDTH-1:0] clock_counter_5_s_axis_tdata;
     logic clock_counter_5_s_axis_tlast;
-
+    
     clock_counter_ad #(
-        .AXIS_DEVICE_TYPE(8'h01),
-        .AXIS_DEVICE_ID(8'h04)) 
-    clock_counter_ad_gtx_rx_u (
+        .AXIS_DEVICE_ID(AXIS_DEBUG_IDS_CLK_PCS_TX)) 
+    clock_counter_ad_gtx_tx_pcs_u (
         .i_clk(clk_logic),
-        .i_clk_extern(clk_gtx_rx),
+        .i_clk_extern(clk_gtx_pcs_tx),
         .i_rst_n(i_rst_n),
 
         //Slave debug interface
@@ -284,6 +285,56 @@ module eth_10g_pkt_receive #(
         .o_s_axis_tready(clock_counter_5_s_axis_tready),
         .i_s_axis_tdata(clock_counter_5_s_axis_tdata),  
         .i_s_axis_tlast(clock_counter_5_s_axis_tlast),  
+       
+        //Master debug interface
+        .o_m_axis_tvalid(clock_counter_6_s_axis_tvalid),
+        .i_m_axis_tready(clock_counter_6_s_axis_tready),
+        .o_m_axis_tdata(clock_counter_6_s_axis_tdata),
+        .o_m_axis_tlast(clock_counter_6_s_axis_tlast)
+    );
+    
+    logic clock_counter_6_s_axis_tvalid;
+    logic clock_counter_6_s_axis_tready;
+    logic [UART_DEBUG_BUS_AXIS_WIDTH-1:0] clock_counter_6_s_axis_tdata;
+    logic clock_counter_6_s_axis_tlast;
+    
+    clock_counter_ad #(
+        .AXIS_DEVICE_ID(AXIS_DEBUG_IDS_CLK_FABRIC_TX)) 
+    clock_counter_ad_gtx_tx_fabric_u (
+        .i_clk(clk_logic),
+        .i_clk_extern(clk_gtx_fabric_tx),
+        .i_rst_n(i_rst_n),
+
+        //Slave debug interface
+        .i_s_axis_tvalid(clock_counter_6_s_axis_tvalid),
+        .o_s_axis_tready(clock_counter_6_s_axis_tready),
+        .i_s_axis_tdata(clock_counter_6_s_axis_tdata),  
+        .i_s_axis_tlast(clock_counter_6_s_axis_tlast),  
+       
+        //Master debug interface
+        .o_m_axis_tvalid(clock_counter_7_s_axis_tvalid),
+        .i_m_axis_tready(clock_counter_7_s_axis_tready),
+        .o_m_axis_tdata(clock_counter_7_s_axis_tdata),
+        .o_m_axis_tlast(clock_counter_7_s_axis_tlast)
+    );
+    
+    logic clock_counter_7_s_axis_tvalid;
+    logic clock_counter_7_s_axis_tready;
+    logic [UART_DEBUG_BUS_AXIS_WIDTH-1:0] clock_counter_7_s_axis_tdata;
+    logic clock_counter_7_s_axis_tlast;
+
+    clock_counter_ad #(
+        .AXIS_DEVICE_ID(AXIS_DEBUG_IDS_CLK_GTX_RX)) 
+    clock_counter_ad_gtx_rx_u (
+        .i_clk(clk_logic),
+        .i_clk_extern(clk_gtx_rx),
+        .i_rst_n(i_rst_n),
+
+        //Slave debug interface
+        .i_s_axis_tvalid(clock_counter_7_s_axis_tvalid),
+        .o_s_axis_tready(clock_counter_7_s_axis_tready),
+        .i_s_axis_tdata(clock_counter_7_s_axis_tdata),  
+        .i_s_axis_tlast(clock_counter_7_s_axis_tlast),  
        
         //Master debug interface
         .o_m_axis_tvalid(i2c_master_s_axis_tvalid),
@@ -296,7 +347,7 @@ module eth_10g_pkt_receive #(
     logic i2c_master_s_axis_tready;
     logic [UART_DEBUG_BUS_AXIS_WIDTH-1:0] i2c_master_s_axis_tdata;
     logic i2c_master_s_axis_tlast;
-
+    
     logic i2c_o_scl;
     logic i2c_o_sda;
     logic i2c_i_scl;
@@ -332,8 +383,7 @@ module eth_10g_pkt_receive #(
 `endif
 
     i2c_master_ad #(
-        .AXIS_DEVICE_TYPE(8'h02),
-        .AXIS_DEVICE_ID(8'h00),
+        .AXIS_DEVICE_ID(AXIS_DEBUG_IDS_I2C_TEMP),
         .CLOCK_SPEED(CLOCK_FREQUENCY),
         .I2C_SPEED_BPS(400_000))
     i2c_master_ad_u (
@@ -387,6 +437,7 @@ module eth_10g_pkt_receive #(
     );
         
     localparam int RX_DATA_WIDTH = 32;
+    localparam int TX_DATA_WIDTH = 32;
 
     logic           clk_gtx_rx; 
     logic           clk_gtx_tx; 
@@ -395,34 +446,36 @@ module eth_10g_pkt_receive #(
     logic [1:0]     gtx_sfp1_rx_header;
     logic           gtx_sfp1_rx_datavalid;
     logic           gtx_sfp1_rx_headervalid;
-    logic [2:0]     gtx_sfp1_rx_status;
+    logic [2:0]     gtx_sfp1_rx_startofseq;
     logic           gtx_sfp1_rx_reset_done;
-    
-    (*MARK_DEBUG = "TRUE" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
-    (*MARK_DEBUG = "TRUE" *) logic [1:0]     gtx_sfp1_rx_header_q;
-    (*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_datavalid_q;
-    (*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_headervalid_q;
-    (*MARK_DEBUG = "TRUE" *) logic [2:0]     gtx_sfp1_rx_status_q;
-    (*MARK_DEBUG = "TRUE" *) logic           gtx_sfp1_rx_reset_done_q;
-    
-    logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
-    logic [1:0]     gtx_sfp1_rx_header_q;
-    logic           gtx_sfp1_rx_datavalid_q;
-    logic           gtx_sfp1_rx_headervalid_q;
-    logic [2:0]     gtx_sfp1_rx_status_q;
-    logic           gtx_sfp1_rx_reset_done_q;
-   
+    logic [2:0]     gtx_sfp1_tx_bufstatus;
+
+    (* MARK_DEBUG = "TRUE" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
+    (* MARK_DEBUG = "TRUE" *) logic [1:0]       gtx_sfp1_rx_header_q;
+    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_datavalid_q;
+    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_headervalid_q;
+    (* MARK_DEBUG = "TRUE" *) logic [2:0]       gtx_sfp1_rx_startofseq_q;
+    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_reset_done_q;
+    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_block_lock_q;
+    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rxslip_q;
+    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_tx_gearbox_ready_q;
+    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_tx_seqstart_q;
+    (* MARK_DEBUG = "TRUE" *) logic [2:0]       gtx_sfp1_tx_bufstatus_q;
+
     //For debug purposes
     always_ff @(posedge clk_gtx_rx) begin    
         gtx_sfp1_rx_data_q <= gtx_sfp1_rx_data;
         gtx_sfp1_rx_header_q <= gtx_sfp1_rx_header;
         gtx_sfp1_rx_datavalid_q <= gtx_sfp1_rx_datavalid;
         gtx_sfp1_rx_headervalid_q <= gtx_sfp1_rx_headervalid;
-        gtx_sfp1_rx_status_q <= gtx_sfp1_rx_status;
+        gtx_sfp1_rx_startofseq_q <= gtx_sfp1_rx_startofseq;
         gtx_sfp1_rx_reset_done_q <= gtx_sfp1_rx_reset_done;
-    end
-   
-    
+        gtx_sfp1_block_lock_q <= gtx_sfp1_block_lock;
+        gtx_sfp1_rxslip_q <= gtx_sfp1_rxslip;
+        gtx_sfp1_tx_gearbox_ready_q <= gtx_sfp1_tx_gearbox_ready;
+        gtx_sfp1_tx_seqstart_q <= gtx_sfp1_tx_startofseq;
+        gtx_sfp1_tx_bufstatus_q <= gtx_sfp1_tx_bufstatus;
+    end 
 
     //FIXME refclk needs to be clocked by the external clock, which comes from the clock generator chip thing
 
@@ -432,26 +485,49 @@ module eth_10g_pkt_receive #(
     logic gtx_sfp1_tx_gearbox_ready;
     logic gtx_sfp1_tx_reset_done;
 
-    assign o_eth_led[3] = gtx_sfp1_rx_reset_done;
-    assign o_eth_led[2] = i_gtx_sfp1_loss;
-    assign o_eth_led[1] = gtx_sfp1_tx_reset_done;
-    assign o_eth_led[0] = gtx_sfp1_tx_gearbox_ready;
+    logic gtx_sfp1_tx_startofseq;
+
+    assign o_eth_led[3] = gtx_sfp1_tx_reset_done;
+    assign o_eth_led[2] = gtx_sfp1_tx_gearbox_ready;
+    assign o_eth_led[1] = tx_pcs_reset;
+    assign o_eth_led[0] = reset_fsm_state == DONE;
+
+    always_ff @(posedge clk_gtx_tx or negedge i_rst_n) begin
+        if (!i_rst_n) begin
+            gtx_sfp1_tx_startofseq <= 1'b0;
+        end else begin
+            if (~i_key2) begin
+                gtx_sfp1_tx_startofseq <= 1'b1;
+            end
+        end
+    end
+
+    //assign o_eth_led[2] = i_gtx_sfp1_loss;
+    //assign o_eth_led[1] = gtx_sfp1_block_lock;
+    //assign o_eth_led[0] = gtx_sfp1_tx_gearbox_ready;
     //assign {o_eth_led[1], o_eth_led[0]} = reset_fsm_state;
 
     //RESET FSM. //TODO REFACTOR
-    typedef enum logic [1:0] {PLL_RESET, GTX_RESET, USR_RDY, DONE} reset_fsm_t;
+    typedef enum logic [2:0] {PLL_RESET, GTX_RESET, USR_RDY, PCS_RESET, PCS_RESET_WAIT, DONE} reset_fsm_t;
     reset_fsm_t reset_fsm_state;
     
     logic reset_fsm_qpll_reset;
     logic reset_fsm_gtx_reset;
     logic reset_fsm_userrdy;
-        
+    logic reset_fsm_gtx_seqstart;
+
+    logic tx_pcs_reset;
+    logic tx_pma_reset;
+
+    always_comb tx_pma_reset = 1'b0;
+
     always_ff @(posedge clk_logic or negedge i_rst_n) begin
         if (!i_rst_n) begin
             reset_fsm_state <= PLL_RESET;
             reset_fsm_qpll_reset <= 1'b1;
             reset_fsm_gtx_reset <= 1'b1;
             reset_fsm_userrdy <= 1'b0;
+            reset_fsm_gtx_seqstart <= 1'b0;
         end else begin
             case (reset_fsm_state)
                 PLL_RESET: begin
@@ -469,12 +545,22 @@ module eth_10g_pkt_receive #(
                 USR_RDY: begin
                     reset_fsm_userrdy <= 1'b1;
                     if (gtx_sfp1_rx_reset_done & gtx_sfp1_tx_reset_done) begin
+                        reset_fsm_state <= PCS_RESET;
+                    end
+                end
+                PCS_RESET: begin
+                    tx_pcs_reset <= 1'b1;
+                    if (~gtx_sfp1_tx_reset_done) begin
+                        reset_fsm_state <= PCS_RESET_WAIT;
+                    end
+                end
+                PCS_RESET_WAIT: begin
+                    tx_pcs_reset <= 1'b0;
+                    if (gtx_sfp1_tx_reset_done) begin
                         reset_fsm_state <= DONE;
                     end
                 end
-                DONE: begin
-                    //* Do nothing *//
-                end
+                DONE: begin /* Do nothing */ end
                 default: $error("Unreachable");
             endcase
         end
@@ -526,13 +612,19 @@ module eth_10g_pkt_receive #(
         .RCALENB(1'b1)
     );    
 
+    logic clk_gtx_pcs_tx;
+    logic clk_gtx_fabric_tx;
+
     gt_wrapper #(
-        .RX_DATA_WIDTH(RX_DATA_WIDTH))
+        .RX_DATA_WIDTH(RX_DATA_WIDTH),
+        .TX_DATA_WIDTH(TX_DATA_WIDTH))
     gtx_lane_0_u (    
         .i_qpll_clk(clk_qpll),
         .i_qpll_refclk(clk_qpll_ref),
         .o_rxout_clk(clk_gtx_rx),
         .o_txout_clk(clk_gtx_tx),
+        .o_txout_pcs_clk(clk_gtx_pcs_tx),
+        .o_txout_fabric_clk(clk_gtx_fabric_tx),
         //Resets
         .i_lpm_reset(1'b0),
         .i_gtx_rx_reset(reset_fsm_gtx_reset),
@@ -545,18 +637,57 @@ module eth_10g_pkt_receive #(
         .o_tx_p(o_gtx_sfp1_tx_p),
         .o_tx_n(o_gtx_sfp1_tx_n),
 
-        .i_rxslip(1'b0),
+        .i_tx_pcs_reset(tx_pcs_reset),
+        .i_tx_pma_reset(tx_pma_reset),
+
+        .i_rxslip(gtx_sfp1_rxslip),
         .i_rx_polarity(1'b0),
 
         .o_rxdata(gtx_sfp1_rx_data),
         .o_rxdata_valid(gtx_sfp1_rx_datavalid),
         .o_rxheader(gtx_sfp1_rx_header),
         .o_rxheader_valid(gtx_sfp1_rx_headervalid),
-        .o_rxstartofseq(/* Unused */),
-        .o_rx_status(gtx_sfp1_rx_status),
+        .o_rxstartofseq(gtx_sfp1_rx_startofseq),
+        .o_rx_status(/* Unused */),
         .o_rx_reset_done(gtx_sfp1_rx_reset_done),
+        .o_tx_bufstatus(gtx_sfp1_tx_bufstatus),
+
+        .i_tx_sequence(gtx_sfp1_txsequence),
+
         .o_tx_gearbox_ready(gtx_sfp1_tx_gearbox_ready),
         .o_tx_reset_done(gtx_sfp1_tx_reset_done)
     );
- 
+    
+    (* MARK_DEBUG = "TRUE" *) logic [6:0]               gtx_sfp1_txsequence;
+    (* MARK_DEBUG = "TRUE" *) logic [2:0]               gtx_sfp1_tx_header;
+    (* MARK_DEBUG = "TRUE" *) logic [TX_DATA_WIDTH-1:0] gtx_sfp1_tx_data;
+    
+    external_tx_gearbox external_tx_gearbox_u (
+        .i_usrclk2(clk_gtx_tx),
+        .i_rst_n(i_rst_n),
+
+        .i_startseq(gtx_sfp1_tx_startofseq),
+
+        .o_txsequence(gtx_sfp1_txsequence),
+
+        .i_header(2'b01),
+        .o_header(gtx_sfp1_tx_header),
+
+        .i_data(32'h00),
+        .o_data(gtx_sfp1_tx_data),
+        .o_data_rdy(/* Unconnected */)
+    );
+    
+    logic gtx_sfp1_block_lock;
+    logic gtx_sfp1_rxslip;
+
+    eth_block_alignment eth_block_lock_sfp1_u (
+        .i_clk(clk_gtx_tx),
+        .i_header(gtx_sfp1_rx_header),
+        .i_header_valid(gtx_sfp1_rx_headervalid),
+        .i_rst_n(i_rst_n),
+        .o_block_lock(gtx_sfp1_block_lock),
+        .o_rxslip(gtx_sfp1_rxslip)
+    );
+
 endmodule
