@@ -652,7 +652,7 @@ module eth_10g_pkt_receive #(
         .o_rx_reset_done(gtx_sfp1_rx_reset_done),
         .o_tx_bufstatus(gtx_sfp1_tx_bufstatus),
 
-        .i_tx_sequence(gtx_sfp1_txsequence),
+        .i_tx_start_seq(gtx_sfp1_tx_startofseq),
 
         .o_tx_gearbox_ready(gtx_sfp1_tx_gearbox_ready),
         .o_tx_reset_done(gtx_sfp1_tx_reset_done)
@@ -662,21 +662,17 @@ module eth_10g_pkt_receive #(
     (* MARK_DEBUG = "TRUE" *) logic [2:0]               gtx_sfp1_tx_header;
     (* MARK_DEBUG = "TRUE" *) logic [TX_DATA_WIDTH-1:0] gtx_sfp1_tx_data;
     
-    external_tx_gearbox external_tx_gearbox_u (
-        .i_usrclk2(clk_gtx_tx),
-        .i_rst_n(i_rst_n),
-
-        .i_startseq(gtx_sfp1_tx_startofseq),
-
-        .o_txsequence(gtx_sfp1_txsequence),
-
-        .i_header(2'b01),
-        .o_header(gtx_sfp1_tx_header),
-
-        .i_data(32'h00),
-        .o_data(gtx_sfp1_tx_data),
-        .o_data_rdy(/* Unconnected */)
-    );
+    //external_tx_gearbox external_tx_gearbox_u (
+    //    .i_usrclk2(clk_gtx_tx),
+    //    .i_rst_n(i_rst_n),
+    //    .i_startseq(gtx_sfp1_tx_startofseq),
+    //    .o_txsequence(gtx_sfp1_txsequence),
+    //    .i_header(2'b01),
+    //    .o_header(gtx_sfp1_tx_header),
+    //    .i_data(32'h00),
+    //    .o_data(gtx_sfp1_tx_data),
+    //    .o_data_rdy(/* Unconnected */)
+    //);
     
     logic gtx_sfp1_block_lock;
     logic gtx_sfp1_rxslip;
