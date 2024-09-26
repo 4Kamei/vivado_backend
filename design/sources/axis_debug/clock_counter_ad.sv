@@ -2,7 +2,6 @@
 `timescale 1ns / 1ps
 
 module clock_counter_ad #(
-        parameter logic [7:0] AXIS_DEVICE_TYPE      = 8'haa,
         parameter logic [7:0] AXIS_DEVICE_ID        = 8'h55
     ) (
         input wire                                  i_clk,
@@ -22,8 +21,10 @@ module clock_counter_ad #(
         output wire                                 o_m_axis_tlast
     );
 
+//Defines *_DEVICE_TYPE variables 
+`include "axis_debug_device_types.sv"
+    localparam AXIS_DEVICE_TYPE = CLOCK_COUNTER_DEVICE_TYPE;
 
-    
     axis_debug_decoder #(
         .AXIS_DEVICE_TYPE(AXIS_DEVICE_TYPE),
         .AXIS_DEVICE_ID(AXIS_DEVICE_ID),

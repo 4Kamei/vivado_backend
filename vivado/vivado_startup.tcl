@@ -29,7 +29,6 @@ read_xdc $PROJ_SOURCES_DIR/${PROJ_NAME}.tcl -unmanaged -verbose
 
 #We don't want to flatten the hierarchy at this point, so that we can set attributes with tcl scripts
 synth_design -top $PROJ_NAME -part $TARGET_PART -flatten_hierarchy none -no_lc
-
 if {[lexists post_synth.tcl]} {
     source post_synth.tcl    
 }

@@ -44,8 +44,9 @@ def write_packet(data):
 
 def translate_device(type):
     return {
-        1: "Counter   ",
-        2: "I2C Master",
+        1: "Counter     ",
+        2: "I2C Master  ",
+        3: "Register Map",
     }[type]
 
 #Identify packet
@@ -78,3 +79,9 @@ for type, id in counters:
     print(id, " Local counter value :", int.from_bytes(local_counter_value, byteorder="big"))
     print(id, " Extern counter value:", int.from_bytes(extern_counter_value, byteorder="big"))
     print(id, " Computed value: ", 200 * float(int.from_bytes(extern_counter_value, byteorder="big")) / float(int.from_bytes(local_counter_value, byteorder="big")))
+
+
+write_packet([0x01, 0x04, 0x03, 0x00] + [0x00] + [0x01])
+write_packet([0x01, 0x04, 0x03, 0x00] + [0x00] + [0x00])
+write_packet([0x01, 0x04, 0x03, 0x00] + [0x01] + [0x01])
+write_packet([0x01, 0x04, 0x03, 0x00] + [0x01] + [0x00])

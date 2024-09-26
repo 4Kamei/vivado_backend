@@ -12,6 +12,6 @@ EXTRA_ARGS += --coverage
 WAVES = 1
 
 
-
+VERILOG_INCLUDE_DIRS = ${PROJ_ROOT}/design/sources/axis_debug
 include $(shell cocotb-config --makefiles)/Makefile.sim
 

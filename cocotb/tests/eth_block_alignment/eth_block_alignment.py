@@ -32,14 +32,19 @@ async def test_finds_block_lock(dut):
     while current_clock < max_clocks:
         current_clock += 1
         await RisingEdge(dut.i_clk)
-        dut.i_header = get_header(alignment)
-        if dut.o_rxslip.value == 1:
-            dut._log.info(f"Found slip at alignment {alignment}")
-            alignment += 1
-            alignment = (alignment % 66)
-        if dut.o_block_lock.value == 1:
-            found_block_lock = True
-            break
+        if random.randint(0, 1) == 0:
+            dut.i_header_valid.value = 0
+            dut.i_header = 0
+        else:
+            dut.i_header_valid.value = 1
+            dut.i_header = get_header(alignment)
+            if dut.o_rxslip.value == 1:
+                dut._log.info(f"Found slip at alignment {alignment}")
+                alignment += 1
+                alignment = (alignment % 66)
+            if dut.o_block_lock.value == 1:
+                found_block_lock = True
+                break
 
     if found_block_lock:
         dut._log.info(f"Found block lock with alignment {alignment}")

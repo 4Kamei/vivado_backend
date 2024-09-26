@@ -4,7 +4,6 @@
 
 //The address here is 2 bytes, and is structured as: {0, 7'(slave_address),8'(register_address)}
 module i2c_master_ad #(
-        parameter logic [7:0] AXIS_DEVICE_TYPE      = 8'h02,
         parameter logic [7:0] AXIS_DEVICE_ID        = 8'h01,
         parameter int         CLOCK_SPEED           = 20_000_000,
         parameter int         I2C_SPEED_BPS         = 100_000
@@ -31,6 +30,9 @@ module i2c_master_ad #(
         output wire                                 o_m_axis_tlast
     );
 
+//Defines *_DEVICE_TYPE variables 
+`include "axis_debug_device_types.sv"
+    localparam AXIS_DEVICE_TYPE = I2C_MASTER_DEVICE_TYPE;
     
     axis_debug_decoder #(
         .AXIS_DEVICE_TYPE(AXIS_DEVICE_TYPE),
