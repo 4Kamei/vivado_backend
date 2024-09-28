@@ -6,7 +6,7 @@ from queue import Queue
 from cocotbext.axi import AxiStreamSource, AxiStreamSink
 from cocotb_bus.bus import Bus
 
-class Scrambler:
+class Descrambler:
     def __init__(self, initial_state):
         self.reg = initial_state
 
@@ -18,8 +18,8 @@ class Scrambler:
 
     def input(self, bit):
         out = bit ^ self.reg[38] ^ self.reg[57]
+        self.reg = [bit] + self.reg[0:57]
         pre_len = len(self.reg)
-        self.reg = [out] + self.reg[0:57]
         assert pre_len == len(self.reg)
         return out
 
@@ -53,9 +53,9 @@ async def scrambler(dut):
         while True:
             yield random.randint(0, 1)
 
-    scrambler = Scrambler([1] * 58)    
+    descrambler = Descrambler([1] * 58)    
 
-    dut.i_scrambler_bypass.value = 0
+    dut.i_descrambler_bypass.value = 0
 
     input_bus = {
         "tready": "o_ready",
@@ -78,7 +78,9 @@ async def scrambler(dut):
     axis_source.set_pause_generator(random_pause_generator())
     axis_sink.set_pause_generator(random_pause_generator())
    
-   
+    had_valid = False
+    max_until_valid = 4
+
     num_data = 2000
     data = [[random.randint(0, 255) for _ in range(4)] for _ in range(num_data)]
 
@@ -88,13 +90,24 @@ async def scrambler(dut):
     def byte_to_bits(in_byte):
         return list(map(int, bin(in_byte+ 256)[3:]))
     
-    for data_in in data:
-        data_out_scrambled = await axis_sink.recv()
+    for i, data_in in enumerate(data):
+        data_out_descrambled = await axis_sink.recv()
     
         data_in_bytes = [p for k in map(byte_to_bits, data_in) for p in k]
         data_in_bytes_int = int("".join(map(str, data_in_bytes)), 2)
-        data_in_bytes_scrambled = scrambler.compute(data_in_bytes)
-        data_out_scrambled = int.from_bytes(data_out_scrambled.tdata, byteorder="little")
+        data_in_bytes_descrambled = descrambler.compute(data_in_bytes)
+        data_out_descrambled = int.from_bytes(data_out_descrambled.tdata, byteorder="little")
         
-        dut._log.info(f"{hex(data_out_scrambled)} <-> {hex(data_in_bytes_int)}")
-        assert data_out_scrambled == data_in_bytes_scrambled, "Scrambler output doesn't match model"
+        dut._log.info(f"{hex(data_out_descrambled)} <-> {hex(data_in_bytes_int)}")
+        
+        if data_out_descrambled == data_in_bytes_descrambled:
+            if not had_valid:
+                dut._log.info(f"Synchronised in {i} cycles")
+            had_valid = True
+        else:
+            max_until_valid -= 1
+            if max_until_valid == 0:
+                assert False, "Could not synchronise in max_until_valid cycles"
+
+        if had_valid:
+            assert data_out_descrambled == data_in_bytes_descrambled, "descrambler output doesn't match model"

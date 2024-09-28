@@ -2,13 +2,18 @@
 `default_nettype none
 
 module eth_descrambler #(
-        parameter int DATA_WIDTH = 16
+        parameter int DATA_WIDTH = 32
     ) (
         input wire                      i_clk, 
         input wire                      i_rst_n,
+
+        input wire                      i_descrambler_bypass,
+
+        input  wire                     i_valid,
+        output wire                     o_valid,
         
-        input  wire                     i_data_valid,
-        output wire                     o_data_valid,
+        input  wire                     i_ready,
+        output wire                     o_ready,
 
         input  wire [DATA_WIDTH-1:0]    i_data,
         output wire [DATA_WIDTH-1:0]    o_data,
@@ -22,10 +27,8 @@ module eth_descrambler #(
 
     logic [57:0]            descrambler;
     logic [DATA_WIDTH-1:0]  output_data;
-    logic                   output_data_valid;
 
     assign o_data       = output_data;
-    assign o_data_valid = output_data_valid;
 
     logic [57:0]            new_descrambler_state;
     logic [DATA_WIDTH-1:0]  output_data_comb;
@@ -35,21 +38,28 @@ module eth_descrambler #(
 
     assign o_header = header;
     assign o_headervalid = headervalid;
-
+    
+    assign o_ready = i_ready;   //Need to pass through ready
+    
+    logic valid_q;
+    assign o_valid = valid_q;
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
             descrambler <= 58'h03FF_FFFF_FFFF_FFFF;    //2 ^ 58 - 1. Initalise to all ones 
         end else begin
-            output_data_valid <= i_data_valid; 
-            if (i_data_valid) begin
+            if ( i_valid && o_ready) begin
                 descrambler <= new_descrambler_state;        
-                output_data <= output_data_comb;
+                output_data <= i_descrambler_bypass ? i_data : output_data_comb;
                 if (i_headervalid) begin
                     //To stop needless toggling on the header pin
                     header <= i_header;
                 end
                 headervalid <= i_headervalid;
+                valid_q <= 1'b1;
+            end
+            if (!i_valid && o_ready) begin
+                valid_q <= 1'b0;
             end
         end
     end

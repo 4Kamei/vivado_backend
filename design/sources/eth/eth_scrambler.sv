@@ -6,7 +6,7 @@ module eth_scrambler #(
     ) (
         input wire                      i_clk, 
         input wire                      i_rst_n,
-        input wire                      scrambler_bypass,
+        input wire                      i_scrambler_bypass,
 
         input  wire                     i_ready,
         output wire                     o_ready,
@@ -39,7 +39,7 @@ module eth_scrambler #(
         end else begin
             if ( i_valid && o_ready) begin
                 scrambler <= new_scrambler_state;        
-                output_data <= scrambler_bypass ? i_data : output_data_comb;
+                output_data <= i_scrambler_bypass ? i_data : output_data_comb;
                 valid_q <= 1'b1;
             end
             if (!i_valid && o_ready) begin
