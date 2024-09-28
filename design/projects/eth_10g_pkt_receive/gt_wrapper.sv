@@ -39,6 +39,9 @@ module gt_wrapper #(
         output wire [2:0]                   o_tx_bufstatus,
 
 
+        input  wire [TX_DATA_WIDTH-1:0]     i_txdata,
+        input  wire [1:0]                   i_txheader,
+
         output wire             o_tx_gearbox_ready,
         output wire             o_tx_reset_done,
 
@@ -421,7 +424,7 @@ module gt_wrapper #(
         //--------------- FPGA TX Interface Datapath Configuration  ----------------
         .TX8B10BEN                      (1'b0),
         //----------------------------- Loopback Ports -----------------------------
-        .LOOPBACK                       (3'b000),       //010 -> Near end PMA loopback
+        .LOOPBACK                       (3'b010),       //010 -> Near end PMA loopback
         //--------------------------- PCI Express Ports ----------------------------
         .PHYSTATUS                      (/* Unused */),
         .RXRATE                         (3'b000),
@@ -639,7 +642,7 @@ module gt_wrapper #(
         .TXMAINCURSOR                   (5'b00000),
         .TXPISOPD                       (1'b0),
         //---------------- Transmit Ports - TX Data Path interface -----------------
-        .TXDATA                         (32'h0),
+        .TXDATA                         (i_txdata),
         //-------------- Transmit Ports - TX Driver and OOB signaling --------------
         .GTXTXN                         (o_tx_n),
         .GTXTXP                         (o_tx_p),
@@ -652,7 +655,7 @@ module gt_wrapper #(
         //------------------- Transmit Ports - TX Gearbox Ports --------------------
         .TXCHARISK                      (8'h00),
         .TXGEARBOXREADY                 (o_tx_gearbox_ready),
-        .TXHEADER                       (3'b010),              
+        .TXHEADER                       ({1'b0, i_txheader}),              
         .TXSEQUENCE                     (/* Unused */),
         .TXSTARTSEQ                     (i_tx_start_seq),
         //----------- Transmit Ports - TX Initialization and Reset Ports -----------

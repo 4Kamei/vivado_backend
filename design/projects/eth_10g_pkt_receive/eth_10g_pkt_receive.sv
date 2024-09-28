@@ -473,7 +473,7 @@ module eth_10g_pkt_receive #(
         gtx_sfp1_block_lock_q <= gtx_sfp1_block_lock;
         gtx_sfp1_rxslip_q <= gtx_sfp1_rxslip;
         gtx_sfp1_tx_gearbox_ready_q <= gtx_sfp1_tx_gearbox_ready;
-        gtx_sfp1_tx_seqstart_q <= gtx_sfp1_tx_startofseq;
+        gtx_sfp1_tx_seqstart_q <= reset_fsm_gtx_seqstart;
         gtx_sfp1_tx_bufstatus_q <= gtx_sfp1_tx_bufstatus;
     end 
 
@@ -487,20 +487,10 @@ module eth_10g_pkt_receive #(
 
     logic gtx_sfp1_tx_startofseq;
 
-    assign o_eth_led[3] = gtx_sfp1_tx_reset_done;
+    assign o_eth_led[3] = gtx_sfp1_rx_reset_done;
     assign o_eth_led[2] = gtx_sfp1_tx_gearbox_ready;
-    assign o_eth_led[1] = tx_pcs_reset;
+    assign o_eth_led[1] = gtx_sfp1_block_lock;
     assign o_eth_led[0] = reset_fsm_state == DONE;
-
-    always_ff @(posedge clk_gtx_tx or negedge i_rst_n) begin
-        if (!i_rst_n) begin
-            gtx_sfp1_tx_startofseq <= 1'b0;
-        end else begin
-            if (~i_key2) begin
-                gtx_sfp1_tx_startofseq <= 1'b1;
-            end
-        end
-    end
 
     //assign o_eth_led[2] = i_gtx_sfp1_loss;
     //assign o_eth_led[1] = gtx_sfp1_block_lock;
@@ -508,7 +498,7 @@ module eth_10g_pkt_receive #(
     //assign {o_eth_led[1], o_eth_led[0]} = reset_fsm_state;
 
     //RESET FSM. //TODO REFACTOR
-    typedef enum logic [2:0] {PLL_RESET, GTX_RESET, USR_RDY, PCS_RESET, PCS_RESET_WAIT, DONE} reset_fsm_t;
+    typedef enum logic [2:0] {PLL_RESET, GTX_RESET, USR_RDY, DONE} reset_fsm_t;
     reset_fsm_t reset_fsm_state;
     
     logic reset_fsm_qpll_reset;
@@ -520,6 +510,7 @@ module eth_10g_pkt_receive #(
     logic tx_pma_reset;
 
     always_comb tx_pma_reset = 1'b0;
+    always_comb tx_pcs_reset = 1'b0;
 
     always_ff @(posedge clk_logic or negedge i_rst_n) begin
         if (!i_rst_n) begin
@@ -545,19 +536,8 @@ module eth_10g_pkt_receive #(
                 USR_RDY: begin
                     reset_fsm_userrdy <= 1'b1;
                     if (gtx_sfp1_rx_reset_done & gtx_sfp1_tx_reset_done) begin
-                        reset_fsm_state <= PCS_RESET;
-                    end
-                end
-                PCS_RESET: begin
-                    tx_pcs_reset <= 1'b1;
-                    if (~gtx_sfp1_tx_reset_done) begin
-                        reset_fsm_state <= PCS_RESET_WAIT;
-                    end
-                end
-                PCS_RESET_WAIT: begin
-                    tx_pcs_reset <= 1'b0;
-                    if (gtx_sfp1_tx_reset_done) begin
                         reset_fsm_state <= DONE;
+                        reset_fsm_gtx_seqstart <= 1'b1;
                     end
                 end
                 DONE: begin /* Do nothing */ end
@@ -643,47 +623,107 @@ module eth_10g_pkt_receive #(
         .i_rxslip(gtx_sfp1_rxslip),
         .i_rx_polarity(1'b0),
 
-        .o_rxdata(gtx_sfp1_rx_data),
-        .o_rxdata_valid(gtx_sfp1_rx_datavalid),
-        .o_rxheader(gtx_sfp1_rx_header),
-        .o_rxheader_valid(gtx_sfp1_rx_headervalid),
+        .o_rxdata(gtx_sfp1_rx_data_scrambled),
+        .o_rxdata_valid(gtx_sfp1_rx_datavalid_scrambled),
+        .o_rxheader(gtx_sfp1_rx_header_scrambled),
+        .o_rxheader_valid(gtx_sfp1_rx_headervalid_scrambled),
         .o_rxstartofseq(gtx_sfp1_rx_startofseq),
         .o_rx_status(/* Unused */),
         .o_rx_reset_done(gtx_sfp1_rx_reset_done),
         .o_tx_bufstatus(gtx_sfp1_tx_bufstatus),
-
-        .i_tx_start_seq(gtx_sfp1_tx_startofseq),
+        
+        .i_txdata(gtx_sfp1_tx_data_scrambled),
+        .i_txheader(2'b10),
+        .i_tx_start_seq(reset_fsm_gtx_seqstart),
 
         .o_tx_gearbox_ready(gtx_sfp1_tx_gearbox_ready),
         .o_tx_reset_done(gtx_sfp1_tx_reset_done)
     );
+   
+    logic gtx_sfp1_tx_gearbox_ready_qq;
+
+    always_ff @(posedge clk_gtx_tx) begin
+        gtx_sfp1_tx_gearbox_ready_qq <= gtx_sfp1_tx_gearbox_ready;
+    end
     
-    (* MARK_DEBUG = "TRUE" *) logic [6:0]               gtx_sfp1_txsequence;
-    (* MARK_DEBUG = "TRUE" *) logic [2:0]               gtx_sfp1_tx_header;
-    (* MARK_DEBUG = "TRUE" *) logic [TX_DATA_WIDTH-1:0] gtx_sfp1_tx_data;
+    eth_scrambler #(
+        .DATA_WIDTH(TX_DATA_WIDTH))
+    eth_scrambler_u (
+        .i_clk(clk_gtx_tx),
+        .i_rst_n(i_rst_n),
+        .i_scrambler_bypass(1'b0),
+
+        .i_ready((gtx_sfp1_tx_gearbox_ready | gtx_sfp1_tx_gearbox_ready_qq) & reset_fsm_gtx_seqstart),
+        .o_ready(scrambler_ready),
+        .i_valid(1'b1),
+        .o_valid(/* Unused */),
+
+        .i_data(scrambler_in_data),
+        .o_data(gtx_sfp1_tx_data_scrambled)
+    );
     
-    //external_tx_gearbox external_tx_gearbox_u (
-    //    .i_usrclk2(clk_gtx_tx),
-    //    .i_rst_n(i_rst_n),
-    //    .i_startseq(gtx_sfp1_tx_startofseq),
-    //    .o_txsequence(gtx_sfp1_txsequence),
-    //    .i_header(2'b01),
-    //    .o_header(gtx_sfp1_tx_header),
-    //    .i_data(32'h00),
-    //    .o_data(gtx_sfp1_tx_data),
-    //    .o_data_rdy(/* Unconnected */)
-    //);
+    (* MARK_DEBUG = "TRUE" *) logic [TX_DATA_WIDTH-1:0] gtx_sfp1_tx_data_scrambled;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic [TX_DATA_WIDTH-1:0] scrambler_in_data;
     
+    //always_comb scrambler_in_data = scrambler_data_toggle ? 32'h1e000000 : 32'h00000000;
+
+    //logic scrambler_data_toggle;
+    logic scrambler_ready;
+
+    always_ff @(posedge clk_gtx_tx or negedge i_rst_n) begin
+        if (!i_rst_n) begin
+            scrambler_in_data = 32'h0;
+        end else begin
+            if (scrambler_ready) begin
+                if (scrambler_in_data[28]) begin
+                    scrambler_in_data <= 32'h00000000;
+                end else begin              //10 _ 00011110 _ 00000000 _ ...   
+                    scrambler_in_data <= 32'h1e000000;
+                end
+            end
+        end
+    end
+    
+    logic [6:0]               gtx_sfp1_txsequence;
+    logic [2:0]               gtx_sfp1_tx_header;
+    logic [TX_DATA_WIDTH-1:0] gtx_sfp1_tx_data;
+    
+    
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_scrambled;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic [1:0]     gtx_sfp1_rx_header_scrambled;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic           gtx_sfp1_rx_datavalid_scrambled;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic           gtx_sfp1_rx_headervalid_scrambled;
+  
+    eth_descrambler #(.DATA_WIDTH(TX_DATA_WIDTH))
+    eth_descrambler_u (
+        .i_clk(clk_gtx_rx),
+        .i_rst_n(i_rst_n),
+        .i_descrambler_bypass(1'b0),
+        .i_data(gtx_sfp1_rx_data_scrambled),
+        .i_valid(gtx_sfp1_rx_datavalid_scrambled),
+        .i_ready(1'b1),
+        .o_ready(/* Unconnected */),
+        .o_data(gtx_sfp1_rx_data),
+        .o_valid(gtx_sfp1_rx_datavalid),
+        //Header passthrough
+        .i_header(gtx_sfp1_rx_header_scrambled),
+        .o_header(gtx_sfp1_rx_header),
+        .i_headervalid(gtx_sfp1_rx_headervalid_scrambled),
+        .o_headervalid(gtx_sfp1_rx_headervalid)
+    );
+
     logic gtx_sfp1_block_lock;
     logic gtx_sfp1_rxslip;
 
     eth_block_alignment eth_block_lock_sfp1_u (
         .i_clk(clk_gtx_tx),
-        .i_header(gtx_sfp1_rx_header),
-        .i_header_valid(gtx_sfp1_rx_headervalid),
+        .i_header(gtx_sfp1_rx_header_scrambled),
+        .i_header_valid(gtx_sfp1_rx_headervalid_scrambled),
         .i_rst_n(i_rst_n),
         .o_block_lock(gtx_sfp1_block_lock),
         .o_rxslip(gtx_sfp1_rxslip)
     );
+
+    
 
 endmodule
