@@ -449,16 +449,17 @@ module eth_10g_pkt_receive #(
     logic           gtx_sfp1_rx_startofseq;
     logic           gtx_sfp1_rx_reset_done;
 
-    (* MARK_DEBUG = "TRUE" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
-    (* MARK_DEBUG = "TRUE" *) logic [1:0]       gtx_sfp1_rx_header_q;
-    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_datavalid_q;
-    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_headervalid_q;
-    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_startofseq_q;
-    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_reset_done_q;
-    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_block_lock_q;
-    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rxslip_q;
-    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_tx_gearbox_ready_q;
-    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_tx_seqstart_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic [1:0]       gtx_sfp1_rx_header_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_rx_datavalid_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_rx_headervalid_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_rx_startofseq_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_rx_reset_done_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_block_lock_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_rxslip_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_tx_gearbox_ready_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_tx_seqstart_q;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic [7:0]       gtx_sfp1_rx_block_char;
 
     //For debug purposes
     always_ff @(posedge clk_gtx_rx) begin    
@@ -472,6 +473,21 @@ module eth_10g_pkt_receive #(
         gtx_sfp1_rxslip_q <= gtx_sfp1_rxslip;
         gtx_sfp1_tx_gearbox_ready_q <= gtx_sfp1_tx_gearbox_ready;
         gtx_sfp1_tx_seqstart_q <= reset_fsm_gtx_seqstart;
+
+        if (gtx_sfp1_rx_header == 2'h2 && gtx_sfp1_rx_headervalid) begin
+            gtx_sfp1_rx_block_char <= {
+                gtx_sfp1_rx_data[24],
+                gtx_sfp1_rx_data[25], 
+                gtx_sfp1_rx_data[26], 
+                gtx_sfp1_rx_data[27], 
+                gtx_sfp1_rx_data[28], 
+                gtx_sfp1_rx_data[29], 
+                gtx_sfp1_rx_data[30], 
+                gtx_sfp1_rx_data[31]};  
+        end
+        if (gtx_sfp1_rx_header == 2'h1 && gtx_sfp1_rx_headervalid) begin
+            gtx_sfp1_rx_block_char <= 8'h00;
+        end
     end 
 
     //FIXME refclk needs to be clocked by the external clock, which comes from the clock generator chip thing
@@ -499,7 +515,7 @@ module eth_10g_pkt_receive #(
     logic reset_fsm_qpll_reset;
     logic reset_fsm_gtx_reset;
     logic reset_fsm_userrdy;
-    (*MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic reset_fsm_gtx_seqstart;
+    logic reset_fsm_gtx_seqstart;
 
     logic tx_pcs_reset;
     logic tx_pma_reset;
@@ -661,13 +677,13 @@ module eth_10g_pkt_receive #(
     assign o_eth_led[1] = 1'b0;
     assign o_eth_led[0] = 1'b0;
     
-    (* MARK_DEBUG = "TRUE" *) logic [TX_DATA_WIDTH-1:0] gtx_sfp1_tx_data_scrambled;
-    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic [TX_DATA_WIDTH-1:0] scrambler_in_data;
+    logic [TX_DATA_WIDTH-1:0] gtx_sfp1_tx_data_scrambled;
+    logic [TX_DATA_WIDTH-1:0] scrambler_in_data;
     
     //always_comb scrambler_in_data = scrambler_data_toggle ? 32'h1e000000 : 32'h00000000;
 
-    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic scrambler_data_toggle;
-    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic scrambler_ready;
+    logic scrambler_data_toggle;
+    logic scrambler_ready;
 
     always_ff @(posedge clk_gtx_tx or negedge i_rst_n) begin
         if (!i_rst_n) begin
@@ -689,10 +705,10 @@ module eth_10g_pkt_receive #(
     logic [TX_DATA_WIDTH-1:0] gtx_sfp1_tx_data;
     
     
-    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_scrambled;
-    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic [1:0]     gtx_sfp1_rx_header_scrambled;
-    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic           gtx_sfp1_rx_datavalid_scrambled;
-    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic           gtx_sfp1_rx_headervalid_scrambled;
+    logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_scrambled;
+    logic [1:0]     gtx_sfp1_rx_header_scrambled;
+    logic           gtx_sfp1_rx_datavalid_scrambled;
+    logic           gtx_sfp1_rx_headervalid_scrambled;
   
     eth_descrambler #(.DATA_WIDTH(TX_DATA_WIDTH))
     eth_descrambler_u (
@@ -716,7 +732,7 @@ module eth_10g_pkt_receive #(
     logic gtx_sfp1_rxslip;
 
     eth_block_alignment eth_block_lock_sfp1_u (
-        .i_clk(clk_gtx_tx),
+        .i_clk(clk_gtx_rx),
         .i_header(gtx_sfp1_rx_header_scrambled),
         .i_header_valid(gtx_sfp1_rx_headervalid_scrambled),
         .i_rst_n(i_rst_n),

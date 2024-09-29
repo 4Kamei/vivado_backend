@@ -59,8 +59,8 @@ module gt_wrapper #(
 
     generate
         if (RX_DATA_WIDTH == 32) begin
-            always_comb rx_usrclk  = o_txout_clk;
-            always_comb rx_usrclk2 = o_txout_clk;
+            always_comb rx_usrclk  = o_rxout_clk;
+            always_comb rx_usrclk2 = o_rxout_clk;
             always_comb tx_usrclk  = o_txout_clk;
             always_comb tx_usrclk2 = o_txout_clk;
         end else begin
@@ -232,7 +232,7 @@ module gt_wrapper #(
             .PCS_RSVD_ATTR                          (48'h000000000000),
 
            //-----------RX Buffer Attributes------------
-            .RXBUF_EN                               ("FALSE"),
+            .RXBUF_EN                               ("TRUE"),
 
            //---------------------CDR Attributes-------------------------
 
