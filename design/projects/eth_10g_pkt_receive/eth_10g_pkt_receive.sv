@@ -446,21 +446,19 @@ module eth_10g_pkt_receive #(
     logic [1:0]     gtx_sfp1_rx_header;
     logic           gtx_sfp1_rx_datavalid;
     logic           gtx_sfp1_rx_headervalid;
-    logic [2:0]     gtx_sfp1_rx_startofseq;
+    logic           gtx_sfp1_rx_startofseq;
     logic           gtx_sfp1_rx_reset_done;
-    logic [2:0]     gtx_sfp1_tx_bufstatus;
 
     (* MARK_DEBUG = "TRUE" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
     (* MARK_DEBUG = "TRUE" *) logic [1:0]       gtx_sfp1_rx_header_q;
     (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_datavalid_q;
     (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_headervalid_q;
-    (* MARK_DEBUG = "TRUE" *) logic [2:0]       gtx_sfp1_rx_startofseq_q;
+    (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_startofseq_q;
     (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rx_reset_done_q;
     (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_block_lock_q;
     (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_rxslip_q;
     (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_tx_gearbox_ready_q;
     (* MARK_DEBUG = "TRUE" *) logic             gtx_sfp1_tx_seqstart_q;
-    (* MARK_DEBUG = "TRUE" *) logic [2:0]       gtx_sfp1_tx_bufstatus_q;
 
     //For debug purposes
     always_ff @(posedge clk_gtx_rx) begin    
@@ -474,7 +472,6 @@ module eth_10g_pkt_receive #(
         gtx_sfp1_rxslip_q <= gtx_sfp1_rxslip;
         gtx_sfp1_tx_gearbox_ready_q <= gtx_sfp1_tx_gearbox_ready;
         gtx_sfp1_tx_seqstart_q <= reset_fsm_gtx_seqstart;
-        gtx_sfp1_tx_bufstatus_q <= gtx_sfp1_tx_bufstatus;
     end 
 
     //FIXME refclk needs to be clocked by the external clock, which comes from the clock generator chip thing
@@ -488,9 +485,7 @@ module eth_10g_pkt_receive #(
     logic gtx_sfp1_tx_startofseq;
 
     assign o_eth_led[3] = gtx_sfp1_rx_reset_done;
-    assign o_eth_led[2] = gtx_sfp1_tx_gearbox_ready;
-    assign o_eth_led[1] = gtx_sfp1_block_lock;
-    assign o_eth_led[0] = reset_fsm_state == DONE;
+    assign o_eth_led[2] = gtx_sfp1_block_lock;
 
     //assign o_eth_led[2] = i_gtx_sfp1_loss;
     //assign o_eth_led[1] = gtx_sfp1_block_lock;
@@ -630,7 +625,6 @@ module eth_10g_pkt_receive #(
         .o_rxstartofseq(gtx_sfp1_rx_startofseq),
         .o_rx_status(/* Unused */),
         .o_rx_reset_done(gtx_sfp1_rx_reset_done),
-        .o_tx_bufstatus(gtx_sfp1_tx_bufstatus),
         
         .i_txdata(gtx_sfp1_tx_data_scrambled),
         .i_txheader(2'b10),
@@ -651,7 +645,7 @@ module eth_10g_pkt_receive #(
     eth_scrambler_u (
         .i_clk(clk_gtx_tx),
         .i_rst_n(i_rst_n),
-        .i_scrambler_bypass(1'b0),
+        .i_scrambler_bypass(1'b1),
 
         .i_ready((gtx_sfp1_tx_gearbox_ready | gtx_sfp1_tx_gearbox_ready_qq) & reset_fsm_gtx_seqstart),
         .o_ready(scrambler_ready),
@@ -662,29 +656,35 @@ module eth_10g_pkt_receive #(
         .o_data(gtx_sfp1_tx_data_scrambled)
     );
     
+    
+
+    assign o_eth_led[1] = 1'b0;
+    assign o_eth_led[0] = 1'b0;
+    
     (* MARK_DEBUG = "TRUE" *) logic [TX_DATA_WIDTH-1:0] gtx_sfp1_tx_data_scrambled;
     (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic [TX_DATA_WIDTH-1:0] scrambler_in_data;
     
     //always_comb scrambler_in_data = scrambler_data_toggle ? 32'h1e000000 : 32'h00000000;
 
-    //logic scrambler_data_toggle;
-    logic scrambler_ready;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic scrambler_data_toggle;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic scrambler_ready;
 
     always_ff @(posedge clk_gtx_tx or negedge i_rst_n) begin
         if (!i_rst_n) begin
-            scrambler_in_data = 32'h0;
+            scrambler_in_data <= 32'h0;
+            scrambler_data_toggle <= 1'b0; 
         end else begin
             if (scrambler_ready) begin
-                if (scrambler_in_data[28]) begin
+                scrambler_data_toggle <= ~scrambler_data_toggle;
+                if (scrambler_data_toggle) begin
                     scrambler_in_data <= 32'h00000000;
                 end else begin              //10 _ 00011110 _ 00000000 _ ...   
-                    scrambler_in_data <= 32'h1e000000;
+                    scrambler_in_data <= 32'h00000000;
                 end
             end
         end
     end
     
-    logic [6:0]               gtx_sfp1_txsequence;
     logic [2:0]               gtx_sfp1_tx_header;
     logic [TX_DATA_WIDTH-1:0] gtx_sfp1_tx_data;
     

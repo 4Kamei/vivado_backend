@@ -36,7 +36,6 @@ module gt_wrapper #(
         output wire                         o_rxstartofseq,
         output wire [2:0]                   o_rx_status,
         output wire                         o_rx_reset_done,
-        output wire [2:0]                   o_tx_bufstatus,
 
 
         input  wire [TX_DATA_WIDTH-1:0]     i_txdata,
@@ -44,8 +43,7 @@ module gt_wrapper #(
 
         output wire             o_tx_gearbox_ready,
         output wire             o_tx_reset_done,
-
-        input  wire             i_tx_sequence,
+        
         input  wire             i_tx_start_seq,
 
         output wire             o_tx_p,
@@ -58,6 +56,7 @@ module gt_wrapper #(
     logic tx_usrclk;
     logic tx_usrclk2;
     
+
     generate
         if (RX_DATA_WIDTH == 32) begin
             always_comb rx_usrclk  = o_txout_clk;
@@ -103,7 +102,7 @@ module gt_wrapper #(
     //These are for 64B/67B, rather than 64B/66B
     logic rxheader_unused;
 
-    logic [RX_DATA_WIDTH-1:0] rxdata; 
+    logic [63:0] rxdata; 
     
     //Using RX_DATA_WIDTH lowest bits
     assign o_rxdata = rxdata[RX_DATA_WIDTH-1:0];
@@ -424,7 +423,7 @@ module gt_wrapper #(
         //--------------- FPGA TX Interface Datapath Configuration  ----------------
         .TX8B10BEN                      (1'b0),
         //----------------------------- Loopback Ports -----------------------------
-        .LOOPBACK                       (3'b010),       //010 -> Near end PMA loopback
+        .LOOPBACK                       (3'b000),       //010 -> Near end PMA loopback
         //--------------------------- PCI Express Ports ----------------------------
         .PHYSTATUS                      (/* Unused */),
         .RXRATE                         (3'b000),
@@ -632,7 +631,7 @@ module gt_wrapper #(
         .TXPHINITDONE                   (/* Unused */),
         .TXPHOVRDEN                     (1'b0),
         //-------------------- Transmit Ports - TX Buffer Ports --------------------
-        .TXBUFSTATUS                    (o_tx_bufstatus),
+        .TXBUFSTATUS                    (/* Unused */),
         //------------- Transmit Ports - TX Configurable Driver Ports --------------
         .TXBUFDIFFCTRL                  (3'b100),
         .TXDEEMPH                       (1'b0),
