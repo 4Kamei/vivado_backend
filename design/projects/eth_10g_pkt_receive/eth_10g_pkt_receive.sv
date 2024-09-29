@@ -499,7 +499,7 @@ module eth_10g_pkt_receive #(
     logic reset_fsm_qpll_reset;
     logic reset_fsm_gtx_reset;
     logic reset_fsm_userrdy;
-    logic reset_fsm_gtx_seqstart;
+    (*MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_tx" *) logic reset_fsm_gtx_seqstart;
 
     logic tx_pcs_reset;
     logic tx_pma_reset;
@@ -645,7 +645,7 @@ module eth_10g_pkt_receive #(
     eth_scrambler_u (
         .i_clk(clk_gtx_tx),
         .i_rst_n(i_rst_n),
-        .i_scrambler_bypass(1'b1),
+        .i_scrambler_bypass(1'b0),
 
         .i_ready((gtx_sfp1_tx_gearbox_ready | gtx_sfp1_tx_gearbox_ready_qq) & reset_fsm_gtx_seqstart),
         .o_ready(scrambler_ready),
@@ -679,7 +679,7 @@ module eth_10g_pkt_receive #(
                 if (scrambler_data_toggle) begin
                     scrambler_in_data <= 32'h00000000;
                 end else begin              //10 _ 00011110 _ 00000000 _ ...   
-                    scrambler_in_data <= 32'h00000000;
+                    scrambler_in_data <= 32'h78000000;
                 end
             end
         end
