@@ -75,6 +75,7 @@ in pkgs.mkShell {
     echo "Sourcing sourceme"
     source sourceme
     export PATH="$(pwd)/bin/:$PATH"
+    export PYTHONPATH="$(pwd)/cocotb/utils:$PYTHONPATH"
     '';
 
 }
