@@ -1,4 +1,4 @@
-from queue import Queue
+from cocotb_util import DataQueue, FixedWidth
 
 def run():
     q = EtherBlockWriter()
@@ -63,50 +63,6 @@ def run():
         hdr, payload = q.next_block()
         print(hdr, hex(payload + 2 ** 64)[3:])
 
-class DataQueue():
-    def __init__(self):
-        self._size = 0
-        self.queue = Queue()
-
-    def size(self):
-        return self._size
-
-    def get(self, n):
-        assert n <= self._size, "Tried to get more elements from queue than allowed"
-        self._size -= n
-        out = [self.queue.get() for _ in range(n)]
-        assert len(out) == n, f"Length of returned array is not n. ({len(out)} != {n})"
-        return out
-
-    def get_or_default(self, n, default):
-        if n > self._size:
-            rem = n - self._size
-            out = self.get(self._size) 
-            out += [default] * rem
-        else:
-            out = self.get(n)
-        assert len(out) == n, f"Length of returned array is not n. ({len(out)} != {n})"
-        return out
-
-    def put(self, data):
-        self._size += 1
-        self.queue.put(data)
-
-class FixedWidth():
-    def __init__(self, val, width, reverse=False):
-        self.val = val
-        self.width = width
-        self.reverse = reverse
-        assert self.val & (2 ** self.width - 1) == self.val, f"Value provided {val} has width greater than {width}"
-
-    def convert(self):
-        representation = list(map(int, bin(2 ** self.width + self.val)[3:]))
-
-        if not self.reverse:
-            return representation 
-        else:
-            return representation[::-1]
-
 #Schedules arbitrary lengths of data bytes/control/ordered sets into blocks with the correct headers
 class EtherBlockWriter():
     def __init__(self, random_bit = None):
@@ -119,16 +75,6 @@ class EtherBlockWriter():
             import random
             self.random_bit = lambda: random.randint(0, 1)
     def next_block(self):
-        #Priorities are as follows:
-        #If self.current_packet == None:
-        #   * Send control signals 
-        #   * Send ordered sets
-        #   * Send start of packet
-
-        #If self.current_packet != None:
-        #   * Send control signals
-        #   * Send data
-
         if self.current_packet == None:
             control_signals = self.control_queue.size()
             ordered_sets = self.ordered_set_queue.size()
@@ -168,6 +114,7 @@ class EtherBlockWriter():
 
             return self.__format_packet(
                         0x1e, self.control_queue.get_or_default(8, FixedWidth(0, 7)))
+        
         if self.current_packet != None:
             
             bytes_remaining = self.current_packet.size()
@@ -220,11 +167,12 @@ class EtherBlockWriter():
         assert len(output_data) == 64, f"Output data from packet is not 64 in length. ({len(output_data)} != 64)"
         return 2, int("".join(output_data), 2)
 
-    def queue_data(self, data):
+    def queue_data(self, data, with_eth_header=False):
         packet = DataQueue()
-        for _ in range(6):
-            packet.put(FixedWidth(0xaa, 8))
-        packet.put(FixedWidth(0xab, 8))
+        if with_eth_header:
+            for _ in range(6):
+                packet.put(FixedWidth(0xaa, 8))
+            packet.put(FixedWidth(0xab, 8))
         for data_byte in data:
             packet.put(FixedWidth(data_byte, 8))
         self.data_queue.put(packet)

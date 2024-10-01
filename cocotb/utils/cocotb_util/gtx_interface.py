@@ -1,4 +1,4 @@
-from ether_block_writer import EtherBlockWriter
+from cocotb_util.ether_block_writer import EtherBlockWriter
 
 class GtxInterface:
     def __init__(self, clock, gtx_scheduler: EtherBlockWriter, ports: dict, output_width = 32, pause_at = [64, 65]):
