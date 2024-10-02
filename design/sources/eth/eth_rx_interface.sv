@@ -44,252 +44,122 @@ module eth_rx_interface #(
         TERM_7     = 8'hff
     } packet_block_type; 
     
-    union packed {
-        struct packed {
-            union packed {
-                struct packed {
-                    logic [7:0] [6:0]   ctrl;
-                } ctrl_only;
-                struct packed {
-                    logic [2:0] [7:0]   ordered_set_data;
-                    logic [3:0]         ordered_set_type;
-                    logic [3:0] [6:0]   ctrl;    
-                } ctrl_ord;
-                struct packed {
-                    logic [2:0] [7:0]   data;
-                    logic [3:0]         blank;
-                    logic [3:0] [6:0]   ctrl;    
-                } ctrl_start;
-                struct packed {
-                    logic [2:0] [7:0]   data;
-                    logic [3:0]         blank;
-                    logic [3:0]         ordered_set_type;
-                    logic [2:0] [7:0]   ordered_set_data;
-                } ord_start;
-                struct packed {
-                    logic [2:0] [7:0]   ordered_set1_data;
-                    logic [3:0]         ordered_set1_type;
-                    logic [3:0]         ordered_set0_type;
-                    logic [2:0] [7:0]   ordered_set0_data;
-                } ord_ord;
-                struct packed {
-                    logic [6:0] [7:0]   data;
-                } start;
-                struct packed {
-                    logic [3:0] [6:0]   ctrl;    
-                    logic [3:0]         ordered_set;
-                    logic [2:0] [7:0]   ordered_set_data;
-                } ord_ctrl;
-                struct packed {
-                    logic [6:0] [6:0]   ctrl;    
-                    logic [6:0]         blank;
-                } term_0;
-                struct packed {
-                    logic [5:0] [6:0]   ctrl;    
-                    logic [5:0]         blank;
-                    logic [7:0]         data;
-                } term_1;
-                struct packed {
-                    logic [4:0] [6:0]   ctrl;    
-                    logic [4:0]         blank;
-                    logic [1:0] [7:0]   data;
-                } term_2;
-                struct packed {
-                    logic [3:0] [6:0]   ctrl;    
-                    logic [3:0]         blank;
-                    logic [2:0] [7:0]   data;
-                } term_3;
-                struct packed {
-                    logic [2:0] [6:0]   ctrl;    
-                    logic [2:0]         blank;
-                    logic [3:0] [7:0]   data;
-                } term_4;
-                struct packed {
-                    logic [1:0] [6:0]   ctrl;    
-                    logic [1:0]         blank;
-                    logic [4:0] [7:0]   data;
-                } term_5;
-                struct packed {
-                    logic [6:0]         ctrl;    
-                    logic               blank;
-                    logic [5:0] [7:0]   data;
-                } term_6;
-                struct packed {
-                    logic [6:0] [7:0]   data;
-                } term_7;
-            } body;
-            packet_block_type pkt_type;
-        } ctrl;
-        logic [7:0] [7:0]   data;    
-    } packet;
-    
-    typedef struct packed {
-        logic [7:0] [7:0] data_register;
-        logic [3:0]       stop_byte;
-    } data_buffer_t;
-    
-    //Updated in a separate always_ff, so needs to be outside of the struct
-    logic [3:0] data_buffer_start_byte;
-
-    function data_buffer_t put_data_in_buffer(
-            input  data_buffer_t      buffer,
-            input  logic [63:0]     data,  
-            input  logic [3:0]      num_bytes
-        );
-
-        data_buffer_t out;
-        out.data_register = buffer.data_register;
-        out.stop_byte  = buffer.stop_byte + 4'(num_bytes);
-
-        for (int data_index = 0; data_index < num_bytes; data_index++) begin
-            out.data_register[buffer.stop_byte[2:0] + 3'(data_index)] = data[(8 * data_index)+:8];                           
-        end
-        
-        return out;    
-
-    endfunction
-
-    logic recv_packet;
-    logic packet_corrupted;
-
-    logic valid_block;
-    
-    logic [1:0]         previous_header;
-
-    (* MARK_DEBUG = "TRUE" *) data_buffer_t data_buffer;
-
-    logic [31:0]        previous_block_reg;
 
     logic [31:0]        input_data_rev;
     always_comb input_data_rev = {i_data[7:0], i_data[15:8], i_data[23:16], i_data[31:24]};
 
-    logic               started;
+    logic               sending;
+    logic [1:0]         skip_next;
 
-    always_comb packet = {input_data_rev, previous_block_reg};
-    //      Packet types:
-    //      CTRL_ONLY   CTRL_ORD    CTRL_START  ORD_START 
-    //      ORD_ORD     START       ORD_CTRL 
-    //      TERM_0      TERM_1      TERM_2      TERM_3        
-    //      TERM_4      TERM_5      TERM_6      TERM_7
+    logic [31:0]        eths_data;
+    logic [1:0]         eths_keep;
+    logic               eths_valid;
+    logic               eths_abort;
+    logic               eths_last;
+    
+    //If it's the start of a new packet, AND the packet is a terminate in
+    //position-0 packet, that means the current beat will need to have
+    //'o_eths_master_last' asserted.
+    logic               eths_last_prev;
+    always_comb eths_last_prev = i_header_valid && block_type == TERM_0;
+
+    assign o_eths_master_data   = eths_data;
+    assign o_eths_master_keep   = eths_keep;
+    assign o_eths_master_valid  = eths_valid;
+    assign o_eths_master_abort  = eths_abort;
+    assign o_eths_master_last   = eths_last_prev ? 1'b1 : eths_last;    //Need a combinatorial path here
+
+    logic [1:0]                 i_header_q;
+    
+    always_ff @(posedge i_clk) i_header_q <= i_header;
+
+
+    packet_block_type   block_type;
+    always_comb block_type = packet_block_type'(i_data[31:24]);
+
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
-            data_buffer.stop_byte  <= 4'b0;
-            started <= 1'b0;
+            sending <= 1'b0;
+            skip_next <= 2'b0;
+            eths_valid <= 1'b0;
         end else begin
-            if (i_header_valid) begin
-                previous_block_reg <= input_data_rev;
-                previous_header <= i_header;
-                started <= 1'b1;
-            end else if (!started) begin
-                //We have not started packet reception yet
-                
-            end else begin
-                if (previous_header == 2'b10) begin
-                    //That means 'packet' is valid:
-                    case (packet.ctrl.pkt_type)
-                        CTRL_ONLY   : begin /* Do nothing */ end
-                        CTRL_ORD    : begin /* Do nothing */ end
-                        CTRL_START  : begin
-                            $error("CTRL_START unimplemented");
-                        end 
-                        ORD_START   : begin
-                            $error("ORD_START unimplemented");
-                        end
-                        ORD_ORD     : begin /* We don't care */ end
-                        START       : begin
-                            //Check if the starting sequence is aa aa aa aa aa aa ab
-                            //as if this is the case, this is an ethernet
-                            //packet
-                            if (packet.ctrl.body.start.data == 56'haa_aa_aa_aa_aa_aa_ab) begin
-                                recv_packet <= 1'b1;
-                                packet_corrupted <= 1'b0;
-                            end else begin
-                                recv_packet <= 1'b1;
-                                packet_corrupted <= 1'b1;
-                            end
-                        end
-                        TERM_0      : begin
-                            recv_packet <= 1'b0;
-                        end
-                        TERM_1      : begin
-                            data_buffer <= put_data_in_buffer(data_buffer, 64'(packet.ctrl.body.term_1.data),'d1);
-                            recv_packet <= 1'b0;
-                        end
-                        TERM_2      : begin
-                            data_buffer <= put_data_in_buffer(data_buffer, 64'(packet.ctrl.body.term_2.data),'d2);
-                            recv_packet <= 1'b0;
-                        end
-                        TERM_3      : begin
-                            data_buffer <= put_data_in_buffer(data_buffer, 64'(packet.ctrl.body.term_3.data),'d3);
-                            recv_packet <= 1'b0;
-                        end
-                        TERM_4      : begin
-                            data_buffer <= put_data_in_buffer(data_buffer, 64'(packet.ctrl.body.term_4.data),'d4);
-                            recv_packet <= 1'b0;
-                        end
-                        TERM_5      : begin
-                            data_buffer <= put_data_in_buffer(data_buffer, 64'(packet.ctrl.body.term_5.data),'d5);
-                            recv_packet <= 1'b0;
-                        end
-                        TERM_6      : begin
-                            data_buffer <= put_data_in_buffer(data_buffer, 64'(packet.ctrl.body.term_6.data),'d6);
-                            recv_packet <= 1'b0;
-                        end
-                        TERM_7      : begin
-                            data_buffer <= put_data_in_buffer(data_buffer, 64'(packet.ctrl.body.term_7.data),'d7);
-                            recv_packet <= 1'b0;
-                        end
-                        default: $display(packet.ctrl.pkt_type);
-                    endcase  
-                end else if (previous_header == 2'b01 & recv_packet) begin
-                    //Need to put the data into the data register, somehow?
-                    //TODO write a systemverilog function for this
-                    data_buffer <= put_data_in_buffer(data_buffer, packet.data,'d8);  
+            if (sending) begin
+                if (skip_next != 0) begin
+                    skip_next <= skip_next - 1'b1;
                 end else begin
-                    //Some sort of error state
-                    $error("BAD HEADER");
+                    if ((i_header_valid && i_header == 2'b01) || (!i_header_valid && i_header_q == 2'b01)) begin
+                        eths_valid <= i_data_valid;
+                        eths_data  <= input_data_rev;
+                        eths_keep  <= 2'b11;
+                        eths_last  <= 1'b0;
+                        eths_abort <= 1'b0;
+                    end else begin
+                        if (i_header_valid) begin
+                            eths_data <= {8'h00, input_data_rev[31:8]};
+                            case (block_type)
+                                TERM_0: begin
+                                    sending <= 1'b0;
+                                    $display("%h", block_type);
+                                    $display(block_type == TERM_0);
+                                    $display(i_header_valid);
+                                end
+                                TERM_1: begin
+                                    eths_keep <= 2'b00;
+                                    eths_last <= 1'b1;
+                                end
+                                TERM_2: begin
+                                    eths_keep <= 2'b01;
+                                    eths_last <= 1'b1;
+                                end
+                                TERM_3: begin
+                                    eths_keep <= 2'b10;
+                                    eths_last <= 1'b1;
+                                end
+                                TERM_4: begin
+                                    eths_keep <= 2'b11;
+                                    eths_last <= 1'b1;
+                                end
+                                TERM_5, TERM_6, TERM_7: begin
+                                    eths_keep <= 2'b11;
+                                    eths_last <= 1'b0;
+                                end
+                                default: $error("Unexpected block type %s", block_type);
+                            endcase
+                        end else begin
+                            eths_data <= input_data_rev;
+                            $display("Unimplemented");
+                        end
+                        //eths_valid <= i_data_valid;
+                        //eths_data  <= input_data_rev;
+                        //eths_keep  <= 2'b11;
+                        //eths_last  <= 1'b0;
+                        //eths_abort <= 1'b0;
+                    end
+                end
+            end else begin
+                //We have the start of a new block
+                if (i_header_valid && i_header == 2'b10) begin
+                    case (block_type)
+                        CTRL_START: begin
+                            //TODO check that there are no error chars or
+                            //somtehing
+                            skip_next <= 2'd2;
+                            sending <= 1'b1;
+                        end
+                        ORD_START: begin
+                            skip_next <= 2'd2;
+                            sending <= 1'b1;
+                        end
+                        START: begin
+                            skip_next <= 2'd1;
+                            sending <= 1'b1;
+                        end
+                        default: $display("Unimplemented packet %s", block_type);
+                    endcase
                 end
             end
         end
     end
-    
-    logic transmission_started;
-
-    logic [3:0] [7:0]   output_data;
-    logic               output_last;
-    logic               output_abort;
-    logic [1:0]         output_keep;
-    logic               output_valid;
-
-    always_ff @(posedge i_clk or negedge i_rst_n) begin
-        if (!i_rst_n) begin
-            data_buffer_start_byte <= 4'b0;
-            transmission_started <= 1'b0;
-        end else begin
-            if (i_data_valid & recv_packet) begin
-                if (transmission_started || data_buffer.stop_byte - data_buffer_start_byte > 0) begin
-                    transmission_started <= 1'b1;
-                    for (logic [3:0] i = 0; i < 4; i++) begin
-                        output_data[i] <= data_buffer.data_register[i + data_buffer_start_byte];
-                    end
-                    output_keep <= data_buffer.stop_byte - data_buffer_start_byte >= 4 
-                        ? 2'b11 
-                        : 2'(data_buffer.stop_byte - data_buffer_start_byte - 1'b1);
-                    if (data_buffer.stop_byte - data_buffer_start_byte >= 4) begin
-                        data_buffer_start_byte <= data_buffer_start_byte + 3'h4;
-                    end else begin
-                        data_buffer_start_byte <= data_buffer.stop_byte;
-                        transmission_started <= 1'b0;
-                    end
-                end 
-            end else begin
-               //something 
-            end
-        end
-    end
-    
-
-
 
 endmodule
 

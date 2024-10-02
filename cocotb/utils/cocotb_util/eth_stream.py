@@ -78,6 +78,8 @@ class EthStreamSink:
         self.byte_width = (bus["data"].value.n_bits // 8)
         import cocotb
         cocotb.start_soon(self.run())
+        import logging
+        self.logger = logging.getLogger("cocotb")
 
     async def run(self):
         while True:
@@ -85,21 +87,19 @@ class EthStreamSink:
             if self.currently_receiving == None:
                 if int(self.bus["valid"].value) == 1:
                     self.currently_receiving = DataQueue()
-            
             if self.currently_receiving != None:
                 keep = int(self.bus["keep"].value)+ 1
                 last = int(self.bus["last"].value)
-                input_data = int(self.bus["data"].value).to_bytes(4, byteorder="big", signed=False)
+                input_data = int(self.bus["data"].value).to_bytes(4, byteorder="little", signed=False)
                 for k in input_data[0:keep]:
                     self.currently_receiving.put(k)
                 if keep != 4:
-                    print(self.bus["last"])
                     assert last == 1, "Sent less than bus_width of bytes, last wasn't asserted"
                 if last == 1:
-                    
+                    self.logger.info(f"Received packet with length {self.currently_receiving.size()}")
                     self.data.put(self.currently_receiving.get(self.currently_receiving.size()))
                     self.currently_receiving = None
-
+                    
     async def recv(self, timeout=None):
         counter = 0
         while self.data.size() == 0:
