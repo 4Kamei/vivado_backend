@@ -24,10 +24,10 @@ class GtxInterface:
         self.ports["datavalid"].value = 0
         self.ports["headervalid"].value = 0
 
-        from cocotb.triggers import FallingEdge
+        from cocotb.triggers import RisingEdge
         
         while True:
-            await FallingEdge(self.clock)
+            await RisingEdge(self.clock)
             if self.count % 66 in self.pause_at:
                 self.ports["datavalid"].value = 0
                 self.ports["headervalid"].value = 0

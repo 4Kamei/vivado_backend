@@ -44,12 +44,107 @@ module eth_rx_interface #(
         TERM_7     = 8'hff
     } packet_block_type; 
     
-
     logic [31:0]        input_data_rev;
     always_comb input_data_rev = {i_data[7:0], i_data[15:8], i_data[23:16], i_data[31:24]};
 
     logic               sending;
     logic [1:0]         skip_next;
+
+    typedef struct packed {
+       logic [31:0] data;  
+       logic [1:0]  keep;  
+       logic        last;  
+    } comb_fifo_data_t;
+    
+    typedef struct packed {
+        comb_fifo_data_t [3:0]  inner_data;
+        logic                   is_aborted;
+        logic [1:0]             write_ptr;
+    } comb_fifo_state_t;
+
+    typedef logic [1:0] comb_fifo_read_ptr_t;
+
+    comb_fifo_read_ptr_t comb_fifo_read_ptr;
+
+    function static logic is_empty(
+        input comb_fifo_state_t input_fifo_state, 
+        input comb_fifo_read_ptr_t comb_fifo_read_ptr);
+        return comb_fifo_read_ptr == input_fifo_state.write_ptr;
+    endfunction
+
+    function static comb_fifo_data_t poll(
+        input comb_fifo_state_t input_fifo_state, 
+        input comb_fifo_read_ptr_t read_ptr);
+        return input_fifo_state.inner_data[read_ptr];
+    endfunction
+
+    function static comb_fifo_state_t clean_fifo();
+        comb_fifo_state_t output_state;
+        output_state.write_ptr  = 2'b0;
+        output_state.is_aborted = 1'b0;
+    endfunction
+
+    function comb_fifo_state_t push_data(
+        input comb_fifo_state_t input_fifo, 
+        input logic [31:0] data, 
+        input logic [1:0] keep, 
+        input logic last);
+        comb_fifo_data_t input_data;
+        $display("Push data single %h, %h, %d", data, keep, last);
+        input_data.keep = keep;
+        input_data.last = last;
+        input_data.data = data;
+        input_fifo.inner_data[input_fifo.write_ptr] = input_data;
+        input_fifo.write_ptr += 1'b1;
+        return input_fifo;
+    endfunction;
+    
+    function comb_fifo_state_t push_data_partial_single(
+        input comb_fifo_state_t input_fifo, 
+        input logic [23:0] data);
+        //Add the new byte and set the last flac
+        comb_fifo_data_t input_data;
+        $display("Push data partial single %h", data);
+        input_data.keep = 2'b11;
+        input_data.last = 1'b0;
+        input_data.data = {8'h0, data};
+        input_fifo.inner_data[input_fifo.write_ptr] = input_data;
+        return input_fifo;
+    endfunction
+
+    //Push a single byte into the msb position
+    function comb_fifo_state_t push_data_partial_byte(
+        input comb_fifo_state_t input_fifo, 
+        input logic [7:0] data_previous,
+        input logic last);
+        comb_fifo_data_t input_data;
+        $display("Push data partial byte %h, %d, (%h)", data_previous, last, input_fifo.inner_data[input_fifo.write_ptr].data);
+        //Here, just add the next byte, increment the pointer and fill in with
+        //nthe new data
+        input_data.data = {data_previous, input_fifo.inner_data[input_fifo.write_ptr].data[23:0]};
+        input_data.keep = 2'b11;
+        input_data.last = last;
+        input_fifo.inner_data[input_fifo.write_ptr] = input_data;
+        input_fifo.write_ptr += 1'b1;
+        return input_fifo;
+    endfunction;
+    
+    //Push a single byte into the msb position, then push the data into the
+    //next position
+    function comb_fifo_state_t push_data_partial_remaining(
+        input comb_fifo_state_t input_fifo, 
+        input logic [7:0] data_previous,
+        input logic [31:0] data, 
+        input logic [1:0] keep, 
+        input logic last);
+        $display("Push data partial remaining %h, %h, %h, %d", data_previous, data, keep, last);
+        input_fifo = push_data_partial_byte(input_fifo, data_previous, 1'b0);
+        input_fifo = push_data(input_fifo, data, keep, last);
+        return input_fifo;
+    endfunction;
+
+    comb_fifo_state_t comb_fifo;
+    logic             valid;
 
     logic [31:0]        eths_data;
     logic [1:0]         eths_keep;
@@ -68,94 +163,171 @@ module eth_rx_interface #(
     assign o_eths_master_valid  = eths_valid;
     assign o_eths_master_abort  = eths_abort;
     assign o_eths_master_last   = eths_last_prev ? 1'b1 : eths_last;    //Need a combinatorial path here
-
-    logic [1:0]                 i_header_q;
     
-    always_ff @(posedge i_clk) i_header_q <= i_header;
+    ////////////////////////////////
+    //  Fifo for the output eth stream
+    //  Fifo is modified only through the associated functions
+    ////////////////////////////////
+
+    logic comb_fifo_empty;
+    always_comb comb_fifo_empty = is_empty(comb_fifo, comb_fifo_read_ptr);
+
+    always_ff @(posedge i_clk or negedge i_rst_n) begin
+        if (!i_rst_n) begin
+                comb_fifo <= clean_fifo();
+                eths_valid <= 1'b0;
+        end else begin
+            //Not empty AND eths_valid means we sent data.
+            if (eths_valid) begin
+                if (comb_fifo_empty) begin
+                    eths_valid <= 1'b0;
+                    eths_last <= 1'b0;
+                end else begin
+                    eths_valid <= 1'b1;
+                    {eths_data, eths_keep, eths_last} <= poll(comb_fifo, comb_fifo_read_ptr);
+                    eths_abort <= comb_fifo.is_aborted;
+                    comb_fifo_read_ptr <= comb_fifo_read_ptr + 1'b1;
+                end
+            end else begin
+                if (!comb_fifo_empty) begin
+                    eths_valid <= 1'b1;
+                    {eths_data, eths_keep, eths_last} <= poll(comb_fifo, comb_fifo_read_ptr);
+                    eths_abort <= comb_fifo.is_aborted;
+                    comb_fifo_read_ptr <= comb_fifo_read_ptr + 1'b1;
+                end
+            end
+        end
+    end
 
 
+
+    
+    logic [1:0]                 i_header_q;
+    logic                       i_header_valid_q;
+
+    always_ff @(posedge i_clk or negedge i_rst_n) begin
+        if (i_data_valid) begin
+            i_header_q <= i_header;
+            i_header_valid_q <= i_header_valid;
+        end
+    end
+    
     packet_block_type   block_type;
+    packet_block_type   prev_block_type;
+
+    logic [23:0]        partial_data;
+    logic               partial_data_valid;
+
+    always_ff @(posedge i_clk) prev_block_type <= block_type;
+
     always_comb block_type = packet_block_type'(i_data[31:24]);
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
             sending <= 1'b0;
             skip_next <= 2'b0;
-            eths_valid <= 1'b0;
+            partial_data_valid <= 1'b0;
         end else begin
-            if (sending) begin
-                if (skip_next != 0) begin
-                    skip_next <= skip_next - 1'b1;
-                end else begin
-                    if ((i_header_valid && i_header == 2'b01) || (!i_header_valid && i_header_q == 2'b01)) begin
-                        eths_valid <= i_data_valid;
-                        eths_data  <= input_data_rev;
-                        eths_keep  <= 2'b11;
-                        eths_last  <= 1'b0;
-                        eths_abort <= 1'b0;
+            if (i_data_valid) begin
+                if (sending) begin
+                    if (skip_next != 0) begin
+                        skip_next <= skip_next - 1'b1;
                     end else begin
-                        if (i_header_valid) begin
-                            eths_data <= {8'h00, input_data_rev[31:8]};
+                        if ((i_header_valid   && (i_header   == 2'b01)) || 
+                            (i_header_valid_q && (i_header_q == 2'b01))) begin
+                            comb_fifo <= push_data(comb_fifo, input_data_rev, 2'b11, 1'b0);
+                        end else if (i_header_valid) begin
+                            $display("Block type %h, Data %h", block_type, input_data_rev);
                             case (block_type)
                                 TERM_0: begin
                                     sending <= 1'b0;
-                                    $display("%h", block_type);
-                                    $display(block_type == TERM_0);
-                                    $display(i_header_valid);
                                 end
                                 TERM_1: begin
-                                    eths_keep <= 2'b00;
-                                    eths_last <= 1'b1;
+                                    comb_fifo <= push_data(comb_fifo, {8'h00, input_data_rev[31:8]}, 2'b00, 1'b1);
+                                    sending <= 1'b0;
                                 end
                                 TERM_2: begin
-                                    eths_keep <= 2'b01;
-                                    eths_last <= 1'b1;
+                                    comb_fifo <= push_data(comb_fifo, {8'h00, input_data_rev[31:8]}, 2'b01, 1'b1);
+                                    sending <= 1'b0;
                                 end
                                 TERM_3: begin
-                                    eths_keep <= 2'b10;
-                                    eths_last <= 1'b1;
+                                    comb_fifo <= push_data(comb_fifo, {8'h00, input_data_rev[31:8]}, 2'b10, 1'b1);
+                                    sending <= 1'b0;
                                 end
-                                TERM_4: begin
-                                    eths_keep <= 2'b11;
-                                    eths_last <= 1'b1;
+                                //These end on the next beat, but need to
+                                //delay the current beat by 1, as keep = 2'b11,
+                                //but only have 3 bytes of data atm
+                                TERM_4, TERM_5, TERM_6, TERM_7: begin
+                                    comb_fifo <= push_data_partial_single(comb_fifo, input_data_rev[31:8]);
                                 end
-                                TERM_5, TERM_6, TERM_7: begin
-                                    eths_keep <= 2'b11;
-                                    eths_last <= 1'b0;
+                                default: begin
+                                    sending <= 1'b0;
+                                    comb_fifo.is_aborted <= 1'b1;
                                 end
-                                default: $error("Unexpected block type %s", block_type);
                             endcase
                         end else begin
-                            eths_data <= input_data_rev;
-                            $display("Unimplemented");
+                            $display("Block type %h", prev_block_type);
+                            sending <= 1'b0; 
+                            case (prev_block_type)
+                                TERM_4: begin
+                                    comb_fifo <= push_data_partial_byte(
+                                        comb_fifo, 
+                                        input_data_rev[7:0],
+                                        1'b1
+                                    );
+                                end
+                                TERM_5: begin
+                                    comb_fifo <= push_data_partial_remaining(
+                                        comb_fifo,
+                                        input_data_rev[7:0],
+                                        {24'h0, input_data_rev[15:8]},
+                                        2'b00,
+                                        1'b1);
+                                end
+                                TERM_6: begin
+                                    comb_fifo <= push_data_partial_remaining(
+                                        comb_fifo,
+                                        input_data_rev[7:0],
+                                        {16'h0, input_data_rev[23:8]},
+                                        2'b01,
+                                        1'b1);
+                                end
+                                TERM_7: begin
+                                    comb_fifo <= push_data_partial_remaining(
+                                        comb_fifo,
+                                        input_data_rev[7:0],
+                                        { 8'h0, input_data_rev[31:8]},
+                                        2'b10,
+                                        1'b1);
+                                end
+                                default: begin
+                                    comb_fifo.is_aborted <= 1'b1;
+                                end
+                            endcase
                         end
-                        //eths_valid <= i_data_valid;
-                        //eths_data  <= input_data_rev;
-                        //eths_keep  <= 2'b11;
-                        //eths_last  <= 1'b0;
-                        //eths_abort <= 1'b0;
                     end
-                end
-            end else begin
-                //We have the start of a new block
-                if (i_header_valid && i_header == 2'b10) begin
-                    case (block_type)
-                        CTRL_START: begin
-                            //TODO check that there are no error chars or
-                            //somtehing
-                            skip_next <= 2'd2;
-                            sending <= 1'b1;
-                        end
-                        ORD_START: begin
-                            skip_next <= 2'd2;
-                            sending <= 1'b1;
-                        end
-                        START: begin
-                            skip_next <= 2'd1;
-                            sending <= 1'b1;
-                        end
-                        default: $display("Unimplemented packet %s", block_type);
-                    endcase
+                    
+                end else begin
+                    //We have the start of a new block
+                    if (i_header_valid && i_header == 2'b10) begin
+                        case (block_type)
+                            CTRL_START: begin
+                                //TODO check that there are no error chars or
+                                //somtehing
+                                skip_next <= 2'd2;
+                                sending <= 1'b1;
+                            end
+                            ORD_START: begin
+                                skip_next <= 2'd2;
+                                sending <= 1'b1;
+                            end
+                            START: begin
+                                skip_next <= 2'd1;
+                                sending <= 1'b1;
+                            end
+                            default: $display("Unimplemented packet %s", block_type);
+                        endcase
+                    end
                 end
             end
         end
