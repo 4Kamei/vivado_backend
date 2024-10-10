@@ -41,7 +41,7 @@ class EthStreamSource:
                     #'keep' has values 0, ..., self.byte_width - 1
                     self.bus["keep"].value = (self.byte_width - 1)
                     send_data = self.currently_sending.get(self.byte_width)
-                    self.bus["data"].value = int.from_bytes(bytearray(send_data), byteorder="big")
+                    self.bus["data"].value = int.from_bytes(bytearray(send_data), byteorder="little")
                     self.bus["abort"].value = 0
                     self.bus["last"].value = 0
                 else:
@@ -49,7 +49,7 @@ class EthStreamSource:
                     #'keep' has values 0, ..., self.byte_width - 1
                     self.bus["keep"].value = (self.currently_sending.size() - 1)
                     send_data = self.currently_sending.get_or_default(self.byte_width, 0x00)
-                    self.bus["data"].value = int.from_bytes(bytearray(send_data), byteorder="big")
+                    self.bus["data"].value = int.from_bytes(bytearray(send_data), byteorder="little")
                     self.bus["abort"].value = 0
                     self.bus["last"].value = 1
                     self.currently_sending = None
@@ -88,6 +88,8 @@ class EthStreamSink:
                 if int(self.bus["valid"].value) == 1:
                     self.currently_receiving = DataQueue()
             if self.currently_receiving != None:
+                if int(self.bus["valid"].value) == 0:
+                    continue
                 keep = int(self.bus["keep"].value)+ 1
                 last = int(self.bus["last"].value)
                 input_data = int(self.bus["data"].value).to_bytes(4, byteorder="little", signed=False)

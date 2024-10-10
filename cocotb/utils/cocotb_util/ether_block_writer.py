@@ -70,6 +70,7 @@ class EtherBlockWriter():
         self.data_queue = DataQueue()
         self.control_queue = DataQueue()
         self.ordered_set_queue = DataQueue()
+        self.error_queue = DataQueue()
         self.current_packet = None 
         if not random_bit:
             import random
@@ -153,9 +154,15 @@ class EtherBlockWriter():
         data = []
         for arg in self.__flatten(list(args)):
             data += [arg.convert()]
+        errors = self.error_queue.get_or_default(1, FixedWidth(0, 66))[0].convert()
+        hdr_errors = errors[0:2]
+        data_errors = errors[2:]
+        hdr_errors = int("".join(map(str, hdr_errors)), 2)
+        data_errors = int("".join(map(str, data_errors)), 2)
+
         output_data = [str(p) for k in data for p in k]
         assert len(output_data) == 64, f"Output data from packet is not 64 in length. ({len(output_data)} != 64)"
-        return 1, int("".join(output_data), 2)
+        return 1 ^ hdr_errors, int("".join(output_data), 2) ^ data_errors
 
     def __format_packet(self, block_type_in, *args):
         block_type = FixedWidth(block_type_in, 8, reverse=True).convert() 
@@ -163,9 +170,23 @@ class EtherBlockWriter():
         data = [block_type]
         for arg in self.__flatten(list(args)):
             data += [arg.convert()]
+        
+        errors = self.error_queue.get_or_default(1, FixedWidth(0, 66))[0].convert()
+        hdr_errors = errors[0:2]
+        data_errors = errors[2:]
+        hdr_errors = int("".join(map(str, hdr_errors)), 2)
+        data_errors = int("".join(map(str, data_errors)), 2)
+        
         output_data = [str(p) for k in data for p in k]
         assert len(output_data) == 64, f"Output data from packet is not 64 in length. ({len(output_data)} != 64)"
-        return 2, int("".join(output_data), 2)
+        return 2 ^ hdr_errors, int("".join(output_data), 2) ^ data_errors
+
+    def queue_error(self, position):
+        offset = position % 66
+        block_num = position // 66
+        for i in range(block_num):
+            self.error_queue.put(FixedWidth(0x00, 66))
+        self.error_queue.put(FixedWidth(1 << (66 - offset - 1),66))
 
     def queue_data(self, data, with_eth_header=False):
         packet = DataQueue()
