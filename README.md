@@ -1,6 +1,11 @@
 # Project Structure
 
+## The environment is managed by nix. Things may be missing from the shell.nix, most notably vivado as I use a separate machine for this. 
 
+## Projects list (For the Alinx AX7325 board)
+
+Currently in active development is eth_10g_pkt_receive.
+    
 ## Directory Structure
 
     base:
