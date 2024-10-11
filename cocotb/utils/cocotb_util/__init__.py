@@ -1,5 +1,29 @@
 from queue import Queue
 
+def bus_by_regex(dut, regex, as_cocotb_bus=False):
+    sigs = dir(dut)
+    import re
+    bus = {}
+    for item in sigs:
+        m = re.match(regex, item)
+        if m != None:
+            s = m.groups()[0]
+            if s in bus:
+                raise Exception(f"match {s}, ({item}) already in bus: {s}")
+            if as_cocotb_bus:
+                bus[s] = str(item)
+            else:
+                bus[s] = getattr(dut, item)
+    if len(bus) == 0:
+        raise Exception(f"Regex {regex} did not match any signals in dut {dut}")
+    if as_cocotb_bus:
+        from cocotb_bus.bus import Bus
+        bus = Bus(dut, "", bus, bus_separator="")
+        bus._optional_signals = [] #For Alex Forenchich's cocotbext.axt
+        return bus
+    else:
+        return bus
+
 class DataQueue():
     def __init__(self):
         self._size = 0
