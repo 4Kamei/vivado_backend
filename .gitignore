@@ -5,6 +5,7 @@ results.xml
 *.vcd
 *.fst
 
+*.pdf
 #Vivado stuff
 vivado/*.v
 vivado/*.bit

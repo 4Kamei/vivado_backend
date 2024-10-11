@@ -60,6 +60,7 @@ in pkgs.mkShell {
     python311Packages.pyserial
     python311Packages.json5
     python311Packages.jsonschema
+    python311Packages.scapy
     #Alex Forenchich
     cocotbext-axi
     cocotbext-uart
