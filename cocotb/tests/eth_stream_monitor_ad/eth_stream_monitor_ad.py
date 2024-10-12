@@ -1,15 +1,18 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, FallingEdge, ClockCycles, Timer
-import random
 
 from cocotbext.axi import AxiStreamSink, AxiStreamSource
 
 from cocotb_util.eth_stream import EthStreamSink, EthStreamSource
-
 from cocotb_util import bus_by_regex
+from cocotb_util import WithTimeout
 
 from cocotb_bus.bus import Bus
+
+from axis_debug.axis_debug_device import DebugBusManager
+
+import random
 
 class TB:
 
@@ -43,10 +46,16 @@ async def test_finds_block_lock(dut):
     stream_source  = EthStreamSource(dut.i_clk_stream, eth_stream_input)
     stream_sink    = EthStreamSink(dut.i_clk_stream, eth_stream_output) 
 
-    axis_dbg_sink   = AxiStreamSink(axis_dbg_input, dut.i_clk_dbg, dut.i_rst_n, reset_active_level=False)
-    axis_dbg_source = AxiStreamSource(axis_dbg_output, dut.i_clk_dbg, dut.i_rst_n, reset_active_level=False)
-    
-    stream_source.send_nowait([0x12])
+    axis_dbg_sink   = AxiStreamSink(axis_dbg_output, dut.i_clk_dbg, dut.i_rst_n, reset_active_level=False)
+    axis_dbg_source = AxiStreamSource(axis_dbg_input, dut.i_clk_dbg, dut.i_rst_n, reset_active_level=False)
 
-    await stream_sink.recv()
+    bus_mgr = DebugBusManager(dut.i_clk_dbg, axis_dbg_sink, axis_dbg_source)
+    
+    out = await bus_mgr.wait_initialize(timeout=20)
+    
+    print(out)
+
+    #stream_source.send_nowait([0x12])
+
+    #await stream_sink.recv()
 

@@ -79,6 +79,10 @@ class WithTimeout:
 
     async def _run(self):
         import cocotb
+        #If we have no timeout, just run the function
+        if self.timeout == None:
+            return True, await self.func
+
         func_task = cocotb.start_soon(self._func())
         timeout_task = cocotb.start_soon(self._timeout())
         executed, result = await self.queue.get()
@@ -89,7 +93,7 @@ class WithTimeout:
         return executed, result
 
     async def _func(self):
-        await self.queue.put((True, await self.func()))
+        await self.queue.put((True, await self.func))
 
     async def _timeout(self):
         from cocotb.triggers import RisingEdge
