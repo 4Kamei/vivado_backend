@@ -68,6 +68,41 @@ class FixedWidth():
         else:
             return representation[::-1]
 
+class WithTimeout:
+
+    def __init__(self, func, clk, timeout):
+        from cocotb.queue import Queue
+        self.queue = Queue(maxsize=1)
+        self.timeout = timeout
+        self.clk = clk
+        self.func = func
+
+    async def _run(self):
+        import cocotb
+        func_task = cocotb.start_soon(self._func())
+        timeout_task = cocotb.start_soon(self._timeout())
+        executed, result = await self.queue.get()
+        if executed:
+            timeout_task.cancel()
+        else:
+            func_task.cancel()
+        return executed, result
+
+    async def _func(self):
+        await self.queue.put((True, await self.func()))
+
+    async def _timeout(self):
+        from cocotb.triggers import RisingEdge
+
+        for _ in range(self.timeout):
+            await RisingEdge(self.clk)
+        
+        await self.queue.put((False, None))
+
+    def __await__(self):
+        return (yield self._run())
+
 from cocotb_util import ether_block_writer
 from cocotb_util import gtx_interface 
 from cocotb_util import eth_stream
+
