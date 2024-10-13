@@ -61,10 +61,14 @@ in pkgs.mkShell {
     python311Packages.json5
     python311Packages.jsonschema
     python311Packages.scapy
+    python311Packages.remote-pdb
+
     #Alex Forenchich
     cocotbext-axi
     cocotbext-uart
     cocotbext-i2c
+
+    inetutils
 
     #For converting wavedrom files into ascii
     #asciiwave

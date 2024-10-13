@@ -160,12 +160,9 @@ module eth_stream_monitor_ad #(
     //
     //Internal register map:
     //
-    //  0:          total packet counter
-    //  1:          trigger active                  
-    //      ->  writes back
-    //          with length of captured packet
-    //  2:          local packet counter            //TODO
-    //  3:          local packet counter reset?     //TODO
+    //  0:          total packet counter        #R
+    //  1:          trigger active              #R/W   
+    //  2:          triggered packet length     #R  
     //
     //  //Packet filters?
     //  0x8000 reserved for reading the saved packet
@@ -213,7 +210,13 @@ module eth_stream_monitor_ad #(
                         //Always reads as '0', as when written '1', we block
                         //by sending write reply only when we capture a packet
                         output_valid_q <= 1'b1;
-                        read_data <= 0;
+                        //IDLE is 0, hence when we read a '1', the packet is
+                        //not ready yet
+                        read_data <= {39'b0, pkt_capture_state != PKT_IDLE};
+                    end
+                    addr_t'(2) : begin : triggered_packet_length
+                        output_valid_q <= 1'b1;
+                        read_data <= pkt_capture_length;
                     end
                     16'b1???????????????: begin : read_saved_packet_case
                         //Need to send a memory read request, wait for the
@@ -237,13 +240,10 @@ module eth_stream_monitor_ad #(
             end
             if (write_request) begin
                 case (rw_address)
-                    addr_t'(1) : begin : write_trigger_active_case
-                        //This condition is also checked inside of the other
-                        //always_ff, we only detect the end condition here
-                        if (pkt_capture_state == PKT_DONE) begin
-                            output_valid_q <= 1'b1;
-                            read_data <= {pkt_capture_length};
-                        end
+                    addr_t'(1) : begin : set_trigger_active_case
+                        //This case is handled in the packet_capture_fsm, so
+                        //just tell the debug decoder we wrote to the address
+                        output_valid_q <= 1'b1;
                     end
                     default: begin : rw_address_invalid_case
                         read_data <= 0;

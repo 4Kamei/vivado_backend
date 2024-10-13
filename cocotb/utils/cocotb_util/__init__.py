@@ -70,6 +70,8 @@ class FixedWidth():
 
 class WithTimeout:
 
+    #TODO somewhere, somehow, sometime, fix this shit
+
     def __init__(self, func, clk, timeout):
         from cocotb.queue import Queue
         self.queue = Queue(maxsize=1)
