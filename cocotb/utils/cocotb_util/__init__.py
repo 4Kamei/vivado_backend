@@ -73,8 +73,8 @@ class WithTimeout:
     #TODO somewhere, somehow, sometime, fix this shit
 
     def __init__(self, func, clk, timeout):
-        from cocotb.queue import Queue
-        self.queue = Queue(maxsize=1)
+        from queue import Queue
+        self.queue = Queue()
         self.timeout = timeout
         self.clk = clk
         self.func = func
@@ -85,26 +85,22 @@ class WithTimeout:
         if self.timeout == None:
             return True, await self.func
 
-        func_task = cocotb.start_soon(self._func())
-        timeout_task = cocotb.start_soon(self._timeout())
-        executed, result = await self.queue.get()
-        if executed:
-            timeout_task.cancel()
-        else:
-            func_task.cancel()
-        return executed, result
-
-    async def _func(self):
-        await self.queue.put((True, await self.func))
-
-    async def _timeout(self):
+        func_task = cocotb.start_soon(self.func)
+        
         from cocotb.triggers import RisingEdge
 
         for _ in range(self.timeout):
+            if func_task.done():
+                return True, func_task.result()
             await RisingEdge(self.clk)
+    
+        if func_task.done():
+            return True, func_task.result()
         
-        await self.queue.put((False, None))
+        func_task.cancel()
 
+        return False, None
+        
     def __await__(self):
         return (yield self._run())
 

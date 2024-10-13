@@ -2,6 +2,8 @@
 let
     pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/cf8cc1201be8bc71b7cbbbdaf349b22f4f99c7ae.tar.gz") {};
     
+    rustPlatform = pkgs.rust.packages.stable.rustPlatform;
+
     cocotbext-axi = with pkgs.python3Packages; buildPythonPackage rec {
       name = "cocotbext-axi";
       version = "master";
@@ -40,6 +42,33 @@ let
 
       propagatedBuildInputs = [ pip cocotb cocotb-bus ];
     };
+    
+
+    #TODO fix this
+    rust-surfer = rustPlatform.buildRustPackage rec {
+      pname = "surfer";
+      version = "0.2.0";
+
+      src = pkgs.fetchgit {
+        url = "https://gitlab.com/surfer-project/surfer";
+        rev = "v0.2.0";
+        hash = "sha256-C5jyWLs7fdEn2oW5BORZYazQwjXNxf8ketYFwlVkHpA=";
+      };
+        
+      cargoHash = "sha256-aDQA4A5mScX9or3Lyiv/5GyAehidnpKKE0grhbP1Ctc=";
+      cargoLock = {
+        lockFile = "${src}/Cargo.lock";
+        outputHashes = {
+          "codespan-0.12.0" = "sha256-3F2006BR3hyhxcUTaQiOjzTEuRECKJKjIDyXonS/lrE=";
+          "egui_skia-0.5.0" = "sha256-dpkcIMPW+v742Ov18vjycLDwnn1JMsvbX6qdnuKOBC4=";
+          "tracing-tree-0.2.0" = "sha256-/JNeAKjAXmKPh0et8958yS7joORDbid9dhFB0VUAhZc=";
+        };
+      };
+
+      propagatedBuildInputs = [pkgs.rustc pkgs.cargo pkgs.openssl pkgs.pkg-config ];
+
+    };
+
 
 in pkgs.mkShell {
 
@@ -62,6 +91,7 @@ in pkgs.mkShell {
     python311Packages.jsonschema
     python311Packages.scapy
     python311Packages.remote-pdb
+    python311Packages.bitstruct
 
     #Alex Forenchich
     cocotbext-axi
@@ -69,6 +99,10 @@ in pkgs.mkShell {
     cocotbext-i2c
 
     inetutils
+    
+    #pkg-config
+    #openssl
+    #rust-surfer
 
     #For converting wavedrom files into ascii
     #asciiwave

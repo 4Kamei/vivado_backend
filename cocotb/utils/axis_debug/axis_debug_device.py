@@ -117,7 +117,7 @@ class PacketParserV1:
         assert len(packet) == 4 + data_width + addr_width, f"Read response should have length 4 + {data_width} + {addr_width}, packet len is {len(packet)}, for packet {packet}"
         read_addr = packet[4:4+addr_width]
         assert len(read_addr) == addr_width, f"Tried to read {addr_width} addr bytes, but couldn't, for packet {packet}" 
-        read_data = packet[4:4+data_width]
+        read_data = packet[4+addr_width:4+addr_width+data_width]
         assert len(read_data) == data_width, f"Tried to read {data_width} data bytes, but couldn't, for packet {packet}" 
         
         return {"version": 0x01, 
@@ -143,7 +143,7 @@ class PacketParserV1:
         assert len(packet) == 4 + data_width + addr_width, f"Write request should have length 4 + {data_width} + {addr_width}, packet len is {len(packet)}, for packet {packet}"
         read_addr = packet[4:4+addr_width]
         assert len(read_addr) == addr_width, f"Tried to read {addr_width} addr bytes, but couldn't, for packet {packet}" 
-        read_data = packet[4:4+data_width]
+        read_data = packet[4+addr_width:4+addr_width+data_width]
         assert len(read_data) == data_width, f"Tried to read {data_width} data bytes, but couldn't, for packet {packet}" 
         
         return {"version": 0x01, 
@@ -201,23 +201,22 @@ class DebugBusManager:
         #How to do the packet receiving? Need to forward the right packets to the right places
     
     async def _get_packet_from_queue(self, queue, timeout=None):
-        from cocotb_util import WithTimeout
     
         async def recv(self):
             pkt_q = queue
             while True:
                 if pkt_q.size() != 0:
-                    return pkt_q.get(1)[0]
-                await self._receive_packet()
-
+                    return True, pkt_q.get(1)[0]
+                if not await self._receive_packet(timeout=timeout):
+                    return False, None
+        
         with self.packet_queue_lock:
-            return await WithTimeout(recv(self), self.clk, timeout=timeout)    
+            return await recv(self)
 
     async def get_identify_responses(self, timeout=None):
         return await self._get_packet_from_queue(self.identify_packet_queue, timeout=timeout)
 
     async def get_packet(self, device_type, device_id, timeout=None):
-        from cocotb_util import WithTimeout
         dev_id = (device_type, device_id)
         assert dev_id in self.device_map, f"Tried to get packet for device {dev_id} but no such device exists"
         return await self._get_packet_from_queue(self.device_map[dev_id], timeout)
@@ -228,7 +227,6 @@ class DebugBusManager:
     async def _receive_packet(self, timeout=None):
         from cocotb_util import WithTimeout
         result, maybe_data = await WithTimeout(self.input_bus.recv(), self.clk, timeout)
-        print("GOT RECEIVE PACKET DATA : ", maybe_data)
         if not result:
             return False
         packet = PacketParserV1.parse(maybe_data.tdata, self.devices)
@@ -243,17 +241,17 @@ class DebugBusManager:
             device_id = (packet["device_type"], packet["device_id"])
             assert device_id in self.device_map, f"Received packet for {device_id} but it's not found in self.device_map"
             self.device_map[device_id].put(packet)
+        
+        return True
 
     async def wait_initialize(self, timeout=20):
-        from cocotb_util import WithTimeout
         from cocotb.queue import Queue as CocotbQueue
         from cocotb_util import DataQueue
         #Sends the 'identify' packet, waits for responses from all the devices on the bus
         #then returns 'AxisDebugDevice' (or subclasses) for each received device
         identify_packet = PacketParserV1.identify()
-        result, _ = await WithTimeout(self.output_bus.send(identify_packet), self.clk, timeout)
-        if not result:
-            raise Exception(f"Did not receive any response packet within {timeout}")
+        
+        await self.output_bus.send(identify_packet)
         
         packets = []
 
@@ -316,7 +314,7 @@ class AxisDebugDevice:
         #And 'recv' bytes are read  from the input_queue
         self.bus_mgr = bus_mgr
     
-    async def write(self, addr, write_data):
+    async def write(self, addr, write_data, timeout=50):
         await self.bus_mgr.write(PacketParserV1.write(
                     self.device_type, 
                     self.device_id, 
@@ -325,6 +323,12 @@ class AxisDebugDevice:
                     write_data, 
                     self.data_width
                 ))
+        #Get the echo'd back write 
+        has_response, response = await self.bus_mgr.get_packet(self.device_type, self.device_id, timeout)
+        assert has_response, f"Failed to get response to read at addr={addr} in {timeout} cycles"  
+        assert response["type"] == PacketParserV1.WriteRequest, f"Expected the received packet to be a write request, instead got {response}"
+
+
 
     async def read(self, addr, timeout=50):
         await self.bus_mgr.write(PacketParserV1.read(
@@ -337,22 +341,55 @@ class AxisDebugDevice:
         has_response, response = await self.bus_mgr.get_packet(self.device_type, self.device_id, timeout)
         assert has_response, f"Failed to get response to read at addr={addr} in {timeout} cycles"  
         assert response["type"] == PacketParserV1.ReadRequest, f"Expected the received packet to be a read request, instead got {response}"
+        
 
-        return response 
+        has_response, response = await self.bus_mgr.get_packet(self.device_type, self.device_id, timeout)
+        assert has_response, f"Failed to get response to read at addr={addr} in {timeout} cycles"  
+        assert response["type"] == PacketParserV1.ReadResponse, f"Expected the received packet to be a read request, instead got {response}"
+
+        return response["data"] 
         
 
 class AxisDebugStreamMonitor(AxisDebugDevice):
     
     async def read_pkt_counter(self):
-        return await self.read(1)
+        return await self.read(0)
 
     async def activate_trigger(self):
-        await self.write(0, 1)
+        await self.write(1, 1)
 
     async def is_triggered(self):
-        return await self.read(0) == 0
+        return await self.read(1) == 0
+    
+    #Trim invalid will trim all rows of data where ~valid, as the entire transaction is saved by the monitor
+    async def readout_packet(self, trim_invalid=False):
+        from bitstruct import unpack
+        
+        
 
-    async def readout_packet(self):
-        pass
+        packet_length = await self.read(2)
+        
+        packet = []
+
+        is_aborted = False
+
+        for i in range(packet_length):
+            read_addr = i + 32768
+            data_row = await self.read(read_addr);
+            print("RECEIVED DATA !!!!!!", data_row)
+            data_row_bytes = data_row.to_bytes(5, byteorder="big")
+            padding, data_int, keep, abort, valid = unpack('u4u32u2u1u1', data_row_bytes)
+            assert padding == 0, f"The padding received was not 0, which is expected from the SV implementation (if it isn't remove this assert)"
+            is_aborted = is_aborted or abort == 1
+            data_bytes = data_int.to_bytes(4, byteorder="little")
+            print(keep, abort, valid)
+            if keep != 3:
+                print(data_bytes)
+                print(keep)
+            for byte in list(data_bytes[0:keep+1]):
+                packet.append(byte)
+        
+        return packet
+
         #Wait until we're triggered, then read the length, then read the bytes from the memory
         #Assemble everything, return the packet

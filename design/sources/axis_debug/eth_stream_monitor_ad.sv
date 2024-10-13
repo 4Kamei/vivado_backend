@@ -113,12 +113,14 @@ module eth_stream_monitor_ad #(
 
 
 
-    typedef logic [9:0] memory_read_addr_t;
-    typedef enum logic          {MEM_IDLE, MEM_DONE} memory_read_state_t;
+    
+
+    typedef logic [NUM_MEMORY_LOCATIONS_LOG2 - 1:0] memory_read_addr_t;
+    typedef enum logic [1:0] {MEM_IDLE, MEM_DELAY, MEM_DONE} memory_read_state_t;
     memory_read_state_t memory_read_state;
     
 
-    memory_read_addr_t memory_read_addr;
+    memory_read_addr_t dbg_memory_read_addr;
     logic   memory_read_en;
 
     typedef struct packed {
@@ -129,20 +131,34 @@ module eth_stream_monitor_ad #(
     } memory_row_t;
     
     memory_row_t memory_read_data;
-    
-    logic [9:0] memory [35:0];
+  
+    //Map the eths signals that are output from the block into a memory row
+    //struct, this is what is actually written to the memory
+    memory_row_t eth_stream_memory_row;
+    always_comb eth_stream_memory_row = {eths_slave_data, eths_slave_keep, eths_slave_abort, eths_slave_valid};
 
+    localparam int NUM_MEMORY_LOCATIONS = 32;
+    localparam int NUM_MEMORY_LOCATIONS_LOG2 = $clog2(NUM_MEMORY_LOCATIONS);
+
+    logic [35:0] memory [NUM_MEMORY_LOCATIONS - 1:0];
+    
     always_ff @(posedge i_clk_dbg or negedge i_rst_n) begin : memory_read_fsm_b
         if (!i_rst_n) begin
             memory_read_state <= MEM_IDLE;
         end else begin
             case (memory_read_state)
                 MEM_IDLE: begin : memory_read_idle_case
-                
+                    if (memory_read_en) begin
+                        memory_read_state <= MEM_DELAY;
+                    end
+                end
+                MEM_DELAY: begin : memory_delay_case
+                    memory_read_state <= MEM_DONE;
                 end
                 MEM_DONE: begin : memory_read_done_case
-                
+                    memory_read_state <= MEM_IDLE;
                 end
+                default: $error("Unreachable");
             endcase
         end
     end
@@ -168,39 +184,135 @@ module eth_stream_monitor_ad #(
     //  0x8000 reserved for reading the saved packet
     //  0xffff
 
-    
+   
+    always @(posedge i_clk_stream) begin : memory_write_b
+        if (stream_memory_write_enable) begin
+            memory[stream_memory_write_addr] <= eth_stream_memory_row;
+        end
+    end
 
-    typedef enum logic [1:0]    {PKT_IDLE, PKT_CAPTURING, PKT_DONE} pkt_capture_state_t;
+    always @(posedge i_clk_dbg) begin : memory_read_b
+        memory_read_data <= memory[dbg_memory_read_addr];
+    end
+
+    typedef enum logic [1:0]    {PKT_IDLE, PKT_WAITING, PKT_CAPTURING, PKT_DONE} pkt_capture_state_t;
     data_t pkt_capture_length;
     pkt_capture_state_t pkt_capture_state;
+   
 
-    always_ff @(posedge i_clk_dbg or negedge i_rst_n) begin : pkt_capture_fsm_b
+    logic  stream__start_packet_capture;
+    logic  stream__packet_capture_started;
+    logic  stream__stop_packet_capture;
+    logic  stream__packet_capture_stopped;
+    
+    logic  dbg__start_packet_capture;
+    logic  dbg__packet_capture_started;
+    logic  dbg__stop_packet_capture;
+    logic  dbg__packet_capture_stopped;
+
+    logic  pkt_capture_bus_idle;
+    
+    logic               stream_memory_write_enable;
+    memory_read_addr_t  stream_memory_write_addr;
+
+    always_ff @(posedge i_clk_stream or negedge i_rst_n) begin : pkt_capture_fsm_b
         if (!i_rst_n) begin
             pkt_capture_state <= PKT_IDLE;
+            pkt_capture_bus_idle <= 1'b1;
+            stream_memory_write_addr <= 0;
+            stream_memory_write_enable <= 1'b1;
         end else begin
+            //Bus starts a packet when we're valid and not last, and we were
+            //idle before
+            if (pkt_capture_bus_idle && i_eths_slave_valid && ~i_eths_slave_last) begin
+                pkt_capture_bus_idle <= 1'b0;
+            end
+            if (!pkt_capture_bus_idle && i_eths_slave_valid && i_eths_slave_last) begin
+                pkt_capture_bus_idle <= 1'b1;
+            end
             case (pkt_capture_state)
                 PKT_IDLE: begin : pkt_capture_idle_case
-                    if (write_request && rw_address == 16'd1 && write_data == 40'b1) begin
+                    if (stream__start_packet_capture) begin
+                        //TODO write the corresponding siganls for the
+                        //handshake here and maybe elsewhere :))
+                        pkt_capture_state <= PKT_WAITING;
+                        stream__packet_capture_started <= 1'b1;
+                        stream__stop_packet_capture <= 1'b0;
+                    end
+                end
+                PKT_WAITING: begin : pkt_capture_waiting_case
+                    if (pkt_capture_bus_idle && !stream__start_packet_capture && i_eths_slave_valid) begin
                         pkt_capture_state <= PKT_CAPTURING;
-                        pkt_capture_length <= 0;
+                        stream__packet_capture_started <= 1'b0;
+                        stream_memory_write_addr <= 0;
+                        stream_memory_write_enable <= 1'b1;
+                        //And also save to the memory
+                        if (i_eths_slave_last) begin
+                            pkt_capture_state <= PKT_DONE;
+                        end
                     end
                 end
                 PKT_CAPTURING: begin : pkt_capture_capturing_case
-                     
+                    if (i_eths_slave_valid && i_eths_slave_last) begin
+                        pkt_capture_state <= PKT_DONE;
+                    end
+                    stream_memory_write_addr <= stream_memory_write_addr + 1'b1;
                 end
                 PKT_DONE: begin : pkt_capture_done_case
-
+                    stream__stop_packet_capture <= 1'b1;
+                        //And also save to the memory
+                    stream_memory_write_enable <= 1'b0;
+                    pkt_capture_state <= PKT_IDLE;
                 end
                 default: $error("Unreachable");
             endcase
         end
     end
+    
+    
+    handshake_data_resync #(.DATA_WIDTH(NUM_MEMORY_LOCATIONS_LOG2)) 
+    handshake_data_resync_stop_packet_capture_u ( 
+        .i_send_clk(i_clk_stream),
+        .i_recv_clk(i_clk_dbg),
+        .i_rst_n(i_rst_n),
+        .i_valid(stream__stop_packet_capture),
+        .o_valid(dbg__stop_packet_capture),
+        .i_data(stream_memory_write_addr),
+        .o_data(dbg_memory_write_addr),
+
+        .i_ack(dbg__packet_capture_stopped),
+        .o_ack(stream__packet_capture_stopped)
+    );
+
+    handshake_resync handshake_resync_start_packet_capture_u (
+        .i_send_clk(i_clk_dbg),
+        .i_recv_clk(i_clk_stream),
+        .i_rst_n(i_rst_n),
+        .i_valid(dbg__start_packet_capture),
+        .o_valid(stream__start_packet_capture),
+        .i_ack(stream__packet_capture_started),
+        .o_ack(dbg__packet_capture_started)
+    );
+    //TODO need a resync
+    
+
+    memory_read_addr_t dbg_memory_write_addr;
 
     always_ff @(posedge i_clk_dbg or negedge i_rst_n) begin : axis_debug_reply_b
         if (!i_rst_n) begin
             output_valid_q <= 1'b0;
+            dbg__start_packet_capture <= 1'b0;
+            dbg__packet_capture_stopped <= 1'b1;
         end else begin
-            if (read_request) begin
+            if (dbg__stop_packet_capture) begin
+                dbg__packet_capture_stopped <= 1'b1;
+                pkt_capture_length <= data_t'(dbg_memory_write_addr);
+            end
+            if (dbg__packet_capture_started) begin
+                dbg__start_packet_capture <= 1'b0;
+                dbg__packet_capture_stopped <= 1'b0;
+            end
+            if (read_request && !output_valid_q) begin
                 case (rw_address) inside
                     addr_t'(0) : begin : total_packet_counter_case
                         output_valid_q <= 1'b1;
@@ -212,21 +324,23 @@ module eth_stream_monitor_ad #(
                         output_valid_q <= 1'b1;
                         //IDLE is 0, hence when we read a '1', the packet is
                         //not ready yet
-                        read_data <= {39'b0, pkt_capture_state != PKT_IDLE};
+                        read_data <= {39'b0, ~dbg__stop_packet_capture};
                     end
                     addr_t'(2) : begin : triggered_packet_length
                         output_valid_q <= 1'b1;
-                        read_data <= pkt_capture_length;
+                        //The +1 is due to the pkt_capture_len being derived
+                        //from the memory write addr
+                        read_data <= pkt_capture_length + 1'b1;
                     end
                     16'b1???????????????: begin : read_saved_packet_case
                         //Need to send a memory read request, wait for the
                         //memory to come back,  
-                        memory_read_addr <= rw_address[9:0];
+                        dbg_memory_read_addr <= NUM_MEMORY_LOCATIONS_LOG2'(rw_address[9:0]);
+                        memory_read_en <= 1'b0;
                         if (memory_read_state == MEM_IDLE) begin
                             memory_read_en <= 1'b1;
-                        end else begin
-                            memory_read_en <= 1'b0;
                         end
+
                         if (memory_read_state == MEM_DONE) begin
                             output_valid_q <= 1'b1;
                             read_data <= {4'h0, memory_read_data};
@@ -238,12 +352,13 @@ module eth_stream_monitor_ad #(
                     end
                 endcase
             end
-            if (write_request) begin
+            if (write_request && !output_valid_q) begin
                 case (rw_address)
                     addr_t'(1) : begin : set_trigger_active_case
                         //This case is handled in the packet_capture_fsm, so
                         //just tell the debug decoder we wrote to the address
                         output_valid_q <= 1'b1;
+                        dbg__start_packet_capture <= 1'b1;
                     end
                     default: begin : rw_address_invalid_case
                         read_data <= 0;
@@ -279,11 +394,11 @@ module eth_stream_monitor_ad #(
     logic                                       eths_slave_abort;
     logic                                       eths_slave_last;
     
-    assign o_eths_master_data = eths_slave_data;
-    assign o_eths_master_keep = eths_slave_keep;
+    assign o_eths_master_data  = eths_slave_data;
+    assign o_eths_master_keep  = eths_slave_keep;
     assign o_eths_master_valid = eths_slave_valid; 
     assign o_eths_master_abort = eths_slave_abort;
-    assign o_eths_master_last = eths_slave_last;
+    assign o_eths_master_last  = eths_slave_last;
     
     always_ff @(posedge i_clk_stream or negedge i_rst_n) begin : eth_stream_passthrough_b
         if (!i_rst_n) begin
