@@ -137,7 +137,7 @@ module eth_stream_monitor_ad #(
     memory_row_t eth_stream_memory_row;
     always_comb eth_stream_memory_row = {eths_slave_data, eths_slave_keep, eths_slave_abort, eths_slave_valid};
 
-    localparam int NUM_MEMORY_LOCATIONS = 32;
+    localparam int NUM_MEMORY_LOCATIONS = 1024;
     localparam int NUM_MEMORY_LOCATIONS_LOG2 = $clog2(NUM_MEMORY_LOCATIONS);
 
     logic [35:0] memory [NUM_MEMORY_LOCATIONS - 1:0];

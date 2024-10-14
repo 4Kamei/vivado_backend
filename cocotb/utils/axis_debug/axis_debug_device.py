@@ -182,7 +182,7 @@ class DebugBusManager:
         from threading import Lock
 
         #All the 'input_bus' and 'output_bus' need to expose, are two function
-        #   input_bus should have an async 'read' with a timeout
+        #   input_bus should     have an async 'read' with a timeout
         #   output_bus should have an async 'write'
         
         self.clk = dut_clk
@@ -226,10 +226,16 @@ class DebugBusManager:
 
     async def _receive_packet(self, timeout=None):
         from cocotb_util import WithTimeout
-        result, maybe_data = await WithTimeout(self.input_bus.recv(), self.clk, timeout)
+        if self.clk == None:
+            result, maybe_data = await self.input_bus.recv(timeout)    
+        else:
+            result, maybe_data = await WithTimeout(self.input_bus.recv(), self.clk, timeout)
         if not result:
             return False
-        packet = PacketParserV1.parse(maybe_data.tdata, self.devices)
+        if not isinstance(maybe_data, bytes):
+            #Assume it's an AxiStreamFrame
+            maybe_data = maybe_data.tdata
+        packet = PacketParserV1.parse(maybe_data, self.devices)
         pkt_type = packet["type"]        
         if self.device_map == {}: #Meaning, we are not initalised yet
             assert pkt_type in [PacketParserV1.Identify, PacketParserV1.IdentifyResponse], f"In not initalized state, we received a non-identify packet {packet}"
@@ -251,7 +257,7 @@ class DebugBusManager:
         #then returns 'AxisDebugDevice' (or subclasses) for each received device
         identify_packet = PacketParserV1.identify()
         
-        await self.output_bus.send(identify_packet)
+        await self.output_bus.write(identify_packet)
         
         packets = []
 

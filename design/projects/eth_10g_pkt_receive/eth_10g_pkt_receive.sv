@@ -486,7 +486,7 @@ module eth_10g_pkt_receive #(
         logic                       last;
     } eth_stream_if_t;
     
-    (* MARK_DEBUG="TRUE", MARK_DEBUG_CLOCK="clk_gtx_rx" *) eth_stream_if_t eths_rx_out;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK = "clk_gtx_rx" *) eth_stream_if_t eths_rx_out;
 
     eth_rx_interface #( .DATAPATH_WIDTH(RX_DATA_WIDTH))
     eth_rx_interface_u (
