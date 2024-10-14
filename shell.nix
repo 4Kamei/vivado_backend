@@ -99,7 +99,9 @@ in pkgs.mkShell {
     cocotbext-i2c
 
     inetutils
-    
+
+    socat #For opening virtual tty for testing
+
     #pkg-config
     #openssl
     #rust-surfer
