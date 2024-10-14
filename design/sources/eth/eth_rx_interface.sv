@@ -1,6 +1,9 @@
 
 `default_nettype none
 `timescale 1ns / 1ps
+//synthesis translate_off
+`define SIMULATION
+//synthesis translate_on
 
 module eth_rx_interface #(
         parameter int DATAPATH_WIDTH = 32
@@ -61,6 +64,20 @@ module eth_rx_interface #(
         logic                   is_aborted;
         logic [1:0]             write_ptr;
     } comb_fifo_state_t;
+
+`ifdef SIMULATION
+    
+    logic [31:0]    comb_fifo_data_0;
+    logic [31:0]    comb_fifo_data_1;
+    logic [31:0]    comb_fifo_data_2;
+    logic [31:0]    comb_fifo_data_3;
+
+    always_comb comb_fifo_data_0 = comb_fifo.inner_data[0].data;
+    always_comb comb_fifo_data_1 = comb_fifo.inner_data[1].data;
+    always_comb comb_fifo_data_2 = comb_fifo.inner_data[2].data;
+    always_comb comb_fifo_data_3 = comb_fifo.inner_data[3].data;
+
+`endif
 
     typedef logic [1:0] comb_fifo_read_ptr_t;
 
@@ -178,14 +195,21 @@ module eth_rx_interface #(
         end else begin
             //Not empty AND eths_valid means we sent data.
             if (eths_valid) begin
-                if (comb_fifo_empty) begin
+                if (comb_fifo_empty || eths_last_prev) begin
                     eths_valid <= 1'b0;
                     eths_last <= 1'b0;
+                    if (eths_last_prev) begin
+                        //In the 'TERM_0' case, eths_last_prev is
+                        //a combinational path. The write pointer in that case
+                        //is incremented once spuriously, hence need to ignore
+                        //the next beat here.
+                        comb_fifo_read_ptr <= comb_fifo_read_ptr + 1'd1;
+                    end
                 end else begin
                     eths_valid <= 1'b1;
                     {eths_data, eths_keep, eths_last} <= poll(comb_fifo, comb_fifo_read_ptr);
                     eths_abort <= comb_fifo.is_aborted;
-                    comb_fifo_read_ptr <= comb_fifo_read_ptr + 1'b1;
+                    comb_fifo_read_ptr <= comb_fifo_read_ptr + 1'd1;
                 end
             end else begin
                 if (!comb_fifo_empty) begin
@@ -215,7 +239,9 @@ module eth_rx_interface #(
             end
         end
     end
-    
+   
+
+
     packet_block_type   block_type;
     packet_block_type   prev_block_type;
 
@@ -242,7 +268,7 @@ module eth_rx_interface #(
                             (i_header_valid_q && (i_header_q == 2'b01))) begin
                             comb_fifo <= push_data(comb_fifo, input_data_rev, 2'b11, 1'b0);
                         end else if (i_header_valid) begin
-                            $display("Block type %h, Data %h", block_type, input_data_rev);
+                            $display("Block type %h, Data %h AT %0t", block_type, input_data_rev,  $time);
                             case (block_type)
                                 TERM_0: begin
                                     sending <= 1'b0;

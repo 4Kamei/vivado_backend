@@ -118,7 +118,7 @@ async def can_receive_blocks_specific(dut):
                 signals[signal].value = signal_row[signal]
             
 
-#@cocotb.test()
+@cocotb.test()
 async def can_receive_blocks_rand(dut):
     
     tb = TB(dut)
