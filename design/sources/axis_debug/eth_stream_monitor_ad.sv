@@ -200,17 +200,17 @@ module eth_stream_monitor_ad #(
     pkt_capture_state_t pkt_capture_state;
    
 
-    logic  stream__start_packet_capture;
-    logic  stream__packet_capture_started;
-    logic  stream__stop_packet_capture;
-    logic  stream__packet_capture_stopped;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_rx" *) logic  stream__start_packet_capture;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_rx" *) logic  stream__packet_capture_started;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_rx" *) logic  stream__stop_packet_capture;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_rx" *) logic  stream__packet_capture_stopped;
     
     logic  dbg__start_packet_capture;
     logic  dbg__packet_capture_started;
     logic  dbg__stop_packet_capture;
     logic  dbg__packet_capture_stopped;
 
-    logic  pkt_capture_bus_idle;
+    (* MARK_DEBUG = "TRUE", MARK_DEBUG_CLOCK = "clk_gtx_rx" *) logic  pkt_capture_bus_idle;
     
     logic               stream_memory_write_enable;
     memory_read_addr_t  stream_memory_write_addr;

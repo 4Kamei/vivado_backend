@@ -3,6 +3,9 @@ import time
 import random
 from queue import Queue
 
+from scapy.layers.l2 import Ether
+from scapy.packet import ls
+
 from axis_debug.axis_debug_device import DebugBusManager, AxisDebugStreamMonitor
 
 class UartSink():
@@ -20,7 +23,6 @@ class UartSink():
         pkt_len = pkt_len[0]
         self.ser.timeout = None
         packet = self.ser.read(pkt_len)
-        print(f"RECEVIED PACKET {packet}")
         return True, packet
         
     #A bit hacky, as ser.read() is blokcings
@@ -35,7 +37,6 @@ class UartSource():
         self.ser = ser
     
     async def write(self, data):
-        print(f"SEND     PACKET {data}")
         self.ser.write(bytearray([len(data)] + data))
         self.ser.flush()
 
@@ -61,14 +62,21 @@ async def run():
             break
     assert axis_stream_monitor != None, f"Couldn't find axis stream monitor"
 
-    print("Waiting until we get a packet", end="")
+    await axis_stream_monitor.activate_trigger()
+
+    print("Waiting until we get a packet : ", end="", flush=True)
     while not await axis_stream_monitor.is_triggered():
-        print(await axis_stream_monitor.read_pkt_counter())
+        #print(await axis_stream_monitor.read_pkt_counter())
         time.sleep(1)
-        print(".")
+        print(".", end= "", flush=True)
     
-    print(axis_stream_monitor.readout_packet(trim_invalid=False))
+    packet = await axis_stream_monitor.readout_packet(trim_invalid=False)
     
+    print("")
+    print(packet)
+    print("")   
+    
+
 
 if __name__ == "__main__":
     import asyncio

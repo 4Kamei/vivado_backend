@@ -506,61 +506,15 @@ module eth_10g_pkt_receive #(
         .i_header_valid(gtx_sfp1_rx_headervalid)
     );
     
-
-
-
-
     logic           clk_gtx_rx; 
     logic           clk_gtx_tx; 
     
-    logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data;
-    logic [1:0]     gtx_sfp1_rx_header;
-    logic           gtx_sfp1_rx_datavalid;
-    logic           gtx_sfp1_rx_headervalid;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK = "clk_gtx_rx" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK = "clk_gtx_rx" *) logic [1:0]     gtx_sfp1_rx_header;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK = "clk_gtx_rx" *) logic           gtx_sfp1_rx_datavalid;
+    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK = "clk_gtx_rx" *) logic           gtx_sfp1_rx_headervalid;
     logic           gtx_sfp1_rx_startofseq;
     logic           gtx_sfp1_rx_reset_done;
-
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic [RX_DATA_WIDTH-1:0]    gtx_sfp1_rx_data_q;
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic [1:0]       gtx_sfp1_rx_header_q;
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_rx_datavalid_q;
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_rx_headervalid_q;
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_rx_startofseq_q;
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_rx_reset_done_q;
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_block_lock_q;
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_rxslip_q;
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_tx_gearbox_ready_q;
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic             gtx_sfp1_tx_seqstart_q;
-    (* MARK_DEBUG = "TRUE" , MARK_DEBUG_CLOCK="clk_gtx_rx" *) logic [7:0]       gtx_sfp1_rx_block_char;
-
-    //For debug purposes
-    always_ff @(posedge clk_gtx_rx) begin    
-        gtx_sfp1_rx_data_q <= gtx_sfp1_rx_data;
-        gtx_sfp1_rx_header_q <= gtx_sfp1_rx_header;
-        gtx_sfp1_rx_datavalid_q <= gtx_sfp1_rx_datavalid;
-        gtx_sfp1_rx_headervalid_q <= gtx_sfp1_rx_headervalid;
-        gtx_sfp1_rx_startofseq_q <= gtx_sfp1_rx_startofseq;
-        gtx_sfp1_rx_reset_done_q <= gtx_sfp1_rx_reset_done;
-        gtx_sfp1_block_lock_q <= gtx_sfp1_block_lock;
-        gtx_sfp1_rxslip_q <= gtx_sfp1_rxslip;
-        gtx_sfp1_tx_gearbox_ready_q <= gtx_sfp1_tx_gearbox_ready;
-        gtx_sfp1_tx_seqstart_q <= reset_fsm_gtx_seqstart;
-
-        if (gtx_sfp1_rx_header == 2'h2 && gtx_sfp1_rx_headervalid) begin
-            gtx_sfp1_rx_block_char <= {
-                gtx_sfp1_rx_data[24],
-                gtx_sfp1_rx_data[25], 
-                gtx_sfp1_rx_data[26], 
-                gtx_sfp1_rx_data[27], 
-                gtx_sfp1_rx_data[28], 
-                gtx_sfp1_rx_data[29], 
-                gtx_sfp1_rx_data[30], 
-                gtx_sfp1_rx_data[31]};  
-        end
-        if (gtx_sfp1_rx_header == 2'h1 && gtx_sfp1_rx_headervalid) begin
-            gtx_sfp1_rx_block_char <= 8'h00;
-        end
-    end 
-
     //FIXME refclk needs to be clocked by the external clock, which comes from the clock generator chip thing
 
     logic clk_qpll;

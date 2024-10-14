@@ -48,7 +48,7 @@ module eth_rx_interface #(
     } packet_block_type; 
     
     logic [31:0]        input_data_rev;
-    always_comb input_data_rev = {i_data[7:0], i_data[15:8], i_data[23:16], i_data[31:24]};
+    always_comb input_data_rev = { << { i_data }}; //Streaming bit-reverse? //{i_data[7:0], i_data[15:8], i_data[23:16], i_data[31:24]};
 
     logic               sending;
     logic [1:0]         skip_next;

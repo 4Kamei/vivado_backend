@@ -371,8 +371,6 @@ class AxisDebugStreamMonitor(AxisDebugDevice):
     async def readout_packet(self, trim_invalid=False):
         from bitstruct import unpack
         
-        
-
         packet_length = await self.read(2)
         
         packet = []
@@ -382,16 +380,11 @@ class AxisDebugStreamMonitor(AxisDebugDevice):
         for i in range(packet_length):
             read_addr = i + 32768
             data_row = await self.read(read_addr);
-            print("RECEIVED DATA !!!!!!", data_row)
             data_row_bytes = data_row.to_bytes(5, byteorder="big")
             padding, data_int, keep, abort, valid = unpack('u4u32u2u1u1', data_row_bytes)
             assert padding == 0, f"The padding received was not 0, which is expected from the SV implementation (if it isn't remove this assert)"
             is_aborted = is_aborted or abort == 1
             data_bytes = data_int.to_bytes(4, byteorder="little")
-            print(keep, abort, valid)
-            if keep != 3:
-                print(data_bytes)
-                print(keep)
             for byte in list(data_bytes[0:keep+1]):
                 packet.append(byte)
         
