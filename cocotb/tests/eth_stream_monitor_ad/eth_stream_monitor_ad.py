@@ -80,7 +80,8 @@ async def saves_packets_with_trigger(dut):
         
         
         assert in_data == out_data, f"Sent data:\n{in_data}\n does not match Received data:\n{out_data}\n"
-#@cocotb.test()
+
+@cocotb.test()
 async def counts_packets(dut):
     
     tb = TB(dut)
@@ -101,7 +102,7 @@ async def counts_packets(dut):
     bus_mgr = DebugBusManager(dut.i_clk_dbg, axis_dbg_sink, axis_dbg_source)
 
 
-    ut = await bus_mgr.wait_initialize(timeout=20)
+    out = await bus_mgr.wait_initialize(timeout=20)
     
     assert len(out) == 1, f"Expected to find exactly one device, found {len(out)}"
     debug_device = out[0]
