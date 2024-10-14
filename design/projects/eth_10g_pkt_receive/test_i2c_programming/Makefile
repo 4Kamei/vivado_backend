@@ -12,5 +12,8 @@ EXTRA_ARGS += "--trace"
 EXTRA_ARGS += "--trace-structs"
 WAVES = 1
 
+VERILOG_INCLUDE_DIRS = ${PROJ_ROOT}/design/sources/axis_debug
+VERILOG_INCLUDE_DIRS += ${PROJ_ROOT}/design/projects/${TOPLEVEL}
+
 include $(shell cocotb-config --makefiles)/Makefile.sim
 

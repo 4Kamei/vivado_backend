@@ -397,10 +397,10 @@ module eth_10g_pkt_receive #(
         .i_s_axis_tlast(i2c_master_s_axis_tlast),  
        
         //Master debug interface
-        .o_m_axis_tvalid(uart_tx_s_axis_tvalid),
-        .i_m_axis_tready(uart_tx_s_axis_tready),
-        .o_m_axis_tdata(uart_tx_s_axis_tdata),
-        .o_m_axis_tlast(uart_tx_s_axis_tlast),
+        .o_m_axis_tvalid(stream_mon_rx_0_axis_tvalid),
+        .i_m_axis_tready(stream_mon_rx_0_axis_tready),
+        .o_m_axis_tdata(stream_mon_rx_0_axis_tdata),
+        .o_m_axis_tlast(stream_mon_rx_0_axis_tlast),
 
         
         .i_sda(i2c_i_sda),
@@ -409,7 +409,46 @@ module eth_10g_pkt_receive #(
         .o_sda(i2c_o_sda),
         .o_scl(i2c_o_scl)
     );
-    
+
+    logic stream_mon_rx_0_axis_tvalid;
+    logic stream_mon_rx_0_axis_tready;
+    logic [UART_DEBUG_BUS_AXIS_WIDTH-1:0] stream_mon_rx_0_axis_tdata;
+    logic stream_mon_rx_0_axis_tlast; 
+
+    eth_stream_monitor_ad #(
+        .AXIS_DEVICE_ID(AXIS_DEBUG_IDS_MON_RX_0),
+        .DATAPATH_WIDTH(32))
+    eth_stream_monitor_ad_rx_0_u (
+        .i_clk_dbg(clk_logic),
+        .i_clk_stream(clk_gtx_rx),
+        .i_rst_n(i_rst_n),
+        //Eth stream master
+        .o_eths_master_data(/* Unconnected */),
+        .o_eths_master_keep(/* Unconnected */),
+        .o_eths_master_valid(/* Unconnected */),
+        .o_eths_master_abort(/* Unconnected */),
+        .o_eths_master_last(/* Unconnected */),
+
+        /* Eth stream master interface */
+        .i_eths_slave_data(eths_rx_out.data),
+        .i_eths_slave_keep(eths_rx_out.keep),
+        .i_eths_slave_valid(eths_rx_out.valid),
+        .i_eths_slave_abort(eths_rx_out.abort),
+        .i_eths_slave_last(eths_rx_out.last),
+
+        //Slave debug interface 
+        .i_s_axis_tvalid(stream_mon_rx_0_axis_tvalid),
+        .o_s_axis_tready(stream_mon_rx_0_axis_tready),
+        .i_s_axis_tdata(stream_mon_rx_0_axis_tdata),
+        .i_s_axis_tlast(stream_mon_rx_0_axis_tlast),
+
+        .o_m_axis_tvalid(uart_tx_s_axis_tvalid),
+        .i_m_axis_tready(uart_tx_s_axis_tready),
+        .o_m_axis_tdata(uart_tx_s_axis_tdata),
+        .o_m_axis_tlast(uart_tx_s_axis_tlast)
+
+    );
+
     logic uart_tx_s_axis_tvalid;
     logic uart_tx_s_axis_tready;
     logic [UART_DEBUG_BUS_AXIS_WIDTH-1:0] uart_tx_s_axis_tdata;
@@ -438,6 +477,38 @@ module eth_10g_pkt_receive #(
         
     localparam int RX_DATA_WIDTH = 32;
     localparam int TX_DATA_WIDTH = 32;
+
+    typedef struct {
+        logic [RX_DATA_WIDTH-1:0]   data;
+        logic [1:0]                 keep;
+        logic                       valid;
+        logic                       abort;
+        logic                       last;
+    } eth_stream_if_t;
+    
+    (* MARK_DEBUG="TRUE", MARK_DEBUG_CLOCK="clk_gtx_rx" *) eth_stream_if_t eths_rx_out;
+
+    eth_rx_interface #( .DATAPATH_WIDTH(RX_DATA_WIDTH))
+    eth_rx_interface_u (
+        .i_clk(clk_gtx_rx),
+        .i_rst_n(i_rst_n),
+
+        /* Eth stream interface */
+        .o_eths_master_data(eths_rx_out.data),
+        .o_eths_master_keep(eths_rx_out.keep),
+        .o_eths_master_valid(eths_rx_out.valid),
+        .o_eths_master_abort(eths_rx_out.abort),
+        .o_eths_master_last(eths_rx_out.last),
+
+        .i_data(gtx_sfp1_rx_data),
+        .i_data_valid(gtx_sfp1_rx_datavalid),
+        .i_header(gtx_sfp1_rx_header),
+        .i_header_valid(gtx_sfp1_rx_headervalid)
+    );
+    
+
+
+
 
     logic           clk_gtx_rx; 
     logic           clk_gtx_tx; 

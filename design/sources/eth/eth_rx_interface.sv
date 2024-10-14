@@ -174,8 +174,7 @@ module eth_rx_interface #(
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
-                comb_fifo <= clean_fifo();
-                eths_valid <= 1'b0;
+            eths_valid <= 1'b0;
         end else begin
             //Not empty AND eths_valid means we sent data.
             if (eths_valid) begin
@@ -206,9 +205,14 @@ module eth_rx_interface #(
     logic                       i_header_valid_q;
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
-        if (i_data_valid) begin
-            i_header_q <= i_header;
-            i_header_valid_q <= i_header_valid;
+        if (!i_rst_n) begin
+            i_header_q <= 2'b00;
+            i_header_valid_q <= 1'b0;
+        end else begin
+            if (i_data_valid) begin
+                i_header_q <= i_header;
+                i_header_valid_q <= i_header_valid;
+            end
         end
     end
     
@@ -224,6 +228,7 @@ module eth_rx_interface #(
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
+            comb_fifo <= clean_fifo();
             sending <= 1'b0;
             skip_next <= 2'b0;
             partial_data_valid <= 1'b0;
