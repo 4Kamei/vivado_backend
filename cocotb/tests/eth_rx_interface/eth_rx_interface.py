@@ -172,7 +172,7 @@ async def can_receive_blocks_rand(dut):
             #   Error characters
             #   Incorrect header -> 00/11
             #   Incorrect block header/Unexpected block headers
-            d_in = [p for p in range(i)]        
+            d_in = [random.randint(0, 255) for _ in range(pkt_len)]        
             if ctrl:
                 block_writer.queue_control(0x00)
             block_writer.queue_data(d_in, with_eth_header=True)

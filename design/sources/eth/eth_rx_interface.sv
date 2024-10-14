@@ -67,22 +67,24 @@ module eth_rx_interface #(
 
 `ifdef SIMULATION
     
-    logic [31:0]    comb_fifo_data_0;
-    logic [31:0]    comb_fifo_data_1;
-    logic [31:0]    comb_fifo_data_2;
-    logic [31:0]    comb_fifo_data_3;
-
-    always_comb comb_fifo_data_0 = comb_fifo.inner_data[0].data;
-    always_comb comb_fifo_data_1 = comb_fifo.inner_data[1].data;
-    always_comb comb_fifo_data_2 = comb_fifo.inner_data[2].data;
-    always_comb comb_fifo_data_3 = comb_fifo.inner_data[3].data;
+    logic [3:0] [39:0]    comb_fifo_data;
+    
+    generate
+        int i;
+        for (genvar i = 0; i < 4; i += 1) begin
+            always_comb comb_fifo_data[i] = {
+                comb_fifo.inner_data[i].data,
+                3'h0, comb_fifo.inner_data[i].last,
+                2'h0, comb_fifo.inner_data[i].keep};
+        end
+    endgenerate
 
 `endif
 
     typedef logic [1:0] comb_fifo_read_ptr_t;
 
     comb_fifo_read_ptr_t comb_fifo_read_ptr;
-
+    
     function static logic is_empty(
         input comb_fifo_state_t input_fifo_state, 
         input comb_fifo_read_ptr_t comb_fifo_read_ptr);
@@ -169,17 +171,11 @@ module eth_rx_interface #(
     logic               eths_abort;
     logic               eths_last;
     
-    //If it's the start of a new packet, AND the packet is a terminate in
-    //position-0 packet, that means the current beat will need to have
-    //'o_eths_master_last' asserted.
-    logic               eths_last_prev;
-    always_comb eths_last_prev = i_header_valid && block_type == TERM_0;
-
     assign o_eths_master_data   = eths_data;
     assign o_eths_master_keep   = eths_keep;
-    assign o_eths_master_valid  = eths_valid;
+    assign o_eths_master_valid  = i_data_valid_q && eths_valid;
     assign o_eths_master_abort  = eths_abort;
-    assign o_eths_master_last   = eths_last_prev ? 1'b1 : eths_last;    //Need a combinatorial path here
+    assign o_eths_master_last   = ~sending & comb_fifo_empty & eths_valid ? 1'b1 : eths_last;    //Need a combinatorial path here
     
     ////////////////////////////////
     //  Fifo for the output eth stream
@@ -188,35 +184,40 @@ module eth_rx_interface #(
 
     logic comb_fifo_empty;
     always_comb comb_fifo_empty = is_empty(comb_fifo, comb_fifo_read_ptr);
-
+    
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
             eths_valid <= 1'b0;
         end else begin
-            //Not empty AND eths_valid means we sent data.
-            if (eths_valid) begin
-                if (comb_fifo_empty || eths_last_prev) begin
-                    eths_valid <= 1'b0;
-                    eths_last <= 1'b0;
-                    if (eths_last_prev) begin
-                        //In the 'TERM_0' case, eths_last_prev is
-                        //a combinational path. The write pointer in that case
-                        //is incremented once spuriously, hence need to ignore
-                        //the next beat here.
+            //We gate this by i_data_valid, as we need access to the last
+            //sample in the buffer. If we assert data_valid = 0 before the
+            //a TERMINATE_0 block, we won't be able to sent tlast
+            if (i_data_valid_q) begin
+                //Not empty AND eths_valid means we sent data.
+                if (eths_valid) begin
+                    if (comb_fifo_empty) begin
+                        eths_valid <= 1'b0;
+                        eths_last <= 1'b0;
+                        //if (eths_last_prev) begin
+                        //    //In the 'TERM_0' case, eths_last_prev is
+                        //    //a combinational path. The write pointer in that case
+                        //    //is incremented once spuriously, hence need to ignore
+                        //    //the next beat here.
+                        //    comb_fifo_read_ptr <= comb_fifo_read_ptr + 1'd1;
+                        //end
+                    end else begin
+                        eths_valid <= 1'b1;
+                        {eths_data, eths_keep, eths_last} <= poll(comb_fifo, comb_fifo_read_ptr);
+                        eths_abort <= comb_fifo.is_aborted;
                         comb_fifo_read_ptr <= comb_fifo_read_ptr + 1'd1;
                     end
                 end else begin
-                    eths_valid <= 1'b1;
-                    {eths_data, eths_keep, eths_last} <= poll(comb_fifo, comb_fifo_read_ptr);
-                    eths_abort <= comb_fifo.is_aborted;
-                    comb_fifo_read_ptr <= comb_fifo_read_ptr + 1'd1;
-                end
-            end else begin
-                if (!comb_fifo_empty) begin
-                    eths_valid <= 1'b1;
-                    {eths_data, eths_keep, eths_last} <= poll(comb_fifo, comb_fifo_read_ptr);
-                    eths_abort <= comb_fifo.is_aborted;
-                    comb_fifo_read_ptr <= comb_fifo_read_ptr + 1'b1;
+                    if (!comb_fifo_empty) begin
+                        eths_valid <= 1'b1;
+                        {eths_data, eths_keep, eths_last} <= poll(comb_fifo, comb_fifo_read_ptr);
+                        eths_abort <= comb_fifo.is_aborted;
+                        comb_fifo_read_ptr <= comb_fifo_read_ptr + 1'b1;
+                    end
                 end
             end
         end
@@ -227,12 +228,15 @@ module eth_rx_interface #(
     
     logic [1:0]                 i_header_q;
     logic                       i_header_valid_q;
-
+    logic                       i_data_valid_q;
+        
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
             i_header_q <= 2'b00;
             i_header_valid_q <= 1'b0;
+            i_data_valid_q <= 1'b0;
         end else begin
+            i_data_valid_q <= i_data_valid;
             if (i_data_valid) begin
                 i_header_q <= i_header;
                 i_header_valid_q <= i_header_valid;
@@ -272,6 +276,9 @@ module eth_rx_interface #(
                             case (block_type)
                                 TERM_0: begin
                                     sending <= 1'b0;
+                                    //Setting of 'last' on the packet is
+                                    //handled through a combinational path
+                                    //testing 'sending' 
                                 end
                                 TERM_1: begin
                                     comb_fifo <= push_data(comb_fifo, {8'h00, input_data_rev[31:8]}, 2'b00, 1'b1);
