@@ -22,8 +22,104 @@ class TB:
         await RisingEdge(self.dut.i_clk)
         self.dut.i_rst_n.value = 1
 
+
+def get_signal_map(pattern_file, start_time, end_time):
+        header_map = {
+            "Sample in Window":"time",
+            "gtx_sfp1_rx_data[31:0]":"data",
+            "gtx_sfp1_rx_datavalid":"data_valid",
+            "gtx_sfp1_rx_header[1:0]":"header",
+            "gtx_sfp1_rx_headervalid":"header_valid",
+        }
+
+        header_indices = {
+            "data":None,
+            "data_valid": None,
+            "header": None,
+            "header_valid": None,
+            "time": None,
+        }
+
+        had_header = False
+        had_next_line = False
+
+        pattern_out = []
+
+        with open(f"test_specific_patterns/{pattern_file}", "r") as f:
+            for line in f:
+                line = line.replace("\n", "")
+                if not had_header:
+                    for i, p in enumerate(line.split(",")):
+                        if p in header_map:
+                            header_indices[header_map[p]] = i
+                    had_header = True
+                    continue
+                if not had_next_line:
+                    had_next_line = True
+                    continue
+               
+                line_s = line.split(",")
+                time = int(line_s[header_indices["time"]])
+                if time >= start_time and time < end_time:
+                    pattern_out.append({
+                        "data":         int(line_s[header_indices["data"]], 16),    
+                        "data_valid":   int(line_s[header_indices["data_valid"]], 16),    
+                        "header":       int(line_s[header_indices["header"]], 16),    
+                        "header_valid": int(line_s[header_indices["header_valid"]], 16),    
+                    })
+
+        return pattern_out
+
+
 @cocotb.test()
-async def test_finds_block_lock(dut):
+async def can_receive_blocks_specific(dut):
+    
+    tb = TB(dut)
+    await tb.reset()
+
+    gtx_output_bus = {
+        "data": dut.i_data,
+        "datavalid": dut.i_data_valid,
+        "header": dut.i_header,
+        "headervalid": dut.i_header_valid
+    }
+   
+    sink_input_bus = {
+            "data" : dut.o_eths_master_data, 
+            "keep" : dut.o_eths_master_keep,
+            "valid": dut.o_eths_master_valid,
+            "abort": dut.o_eths_master_abort,
+            "last" : dut.o_eths_master_last
+        }
+
+    
+    patterns = [
+        ("ping_0.csv", 1000, 1058)    
+    ]
+ 
+    stream_sink = EthStreamSink(dut.i_clk, sink_input_bus)
+
+    signals = {
+        "data": dut.i_data,
+        "data_valid": dut.i_data_valid,
+        "header": dut.i_header,
+        "header_valid": dut.i_header_valid,
+    }
+
+    for pattern_file, start_cycle, end_cycle in patterns:
+        await tb.reset()
+
+        signal_map = get_signal_map(pattern_file, start_cycle, end_cycle)
+    
+        for signal_row in signal_map:
+            await RisingEdge(dut.i_clk)
+            print(f"Setting {hex(signal_row['data'])} with {signal_row['header']} - {signal_row['data_valid']}, {signal_row['header_valid']}")
+            for signal in signal_row:
+                signals[signal].value = signal_row[signal]
+            
+
+#@cocotb.test()
+async def can_receive_blocks_rand(dut):
     
     tb = TB(dut)
     await tb.reset()
