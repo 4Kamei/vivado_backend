@@ -1,0 +1,83 @@
+[*]
+[*] GTKWave Analyzer v3.3.118 (w)1999-2023 BSI
+[*] Mon Oct 14 17:08:16 2024
+[*]
+[dumpfile] "/home/kamei/projects/fpga_projects/vivado_backend/cocotb/tests/eth_rx_interface/dump.vcd"
+[dumpfile_mtime] "Mon Oct 14 17:07:00 2024"
+[dumpfile_size] 1408011
+[savefile] "/home/kamei/projects/fpga_projects/vivado_backend/cocotb/tests/eth_rx_interface/view.gtkw"
+[timestart] 25040
+[size] 1902 944
+[pos] 8 80
+*-12.599999 48920 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] eth_rx_interface.
+[sst_width] 309
+[signals_width] 364
+[sst_expanded] 1
+[sst_vpaned_height] 276
+@28
+eth_rx_interface.i_clk
+@22
+eth_rx_interface.i_data[31:0]
+@28
+eth_rx_interface.i_data_valid
+eth_rx_interface.i_header[1:0]
+eth_rx_interface.i_header_q[1:0]
+eth_rx_interface.i_header_valid
+eth_rx_interface.i_header_valid_q
+eth_rx_interface.i_rst_n
+@200
+-
+@22
+eth_rx_interface.input_data_rev[31:0]
+@200
+-
+@28
+eth_rx_interface.o_eths_master_abort
+@22
+eth_rx_interface.o_eths_master_data[31:0]
+@28
+eth_rx_interface.o_eths_master_keep[1:0]
+eth_rx_interface.o_eths_master_last
+eth_rx_interface.o_eths_master_valid
+@200
+-
+@28
+eth_rx_interface.comb_fifo_read_ptr[1:0]
+@c00028
+eth_rx_interface.comb_fifo.write_ptr[1:0]
+@28
+(0)eth_rx_interface.comb_fifo.write_ptr[1:0]
+(1)eth_rx_interface.comb_fifo.write_ptr[1:0]
+@1401200
+-group_end
+@200
+-
+@29
+eth_rx_interface.eths_valid
+@28
+eth_rx_interface.eths_last_prev
+eth_rx_interface.comb_fifo_empty
+@200
+-
+@22
+eth_rx_interface.comb_fifo_data_0[31:0]
+eth_rx_interface.comb_fifo_data_1[31:0]
+eth_rx_interface.comb_fifo_data_2[31:0]
+eth_rx_interface.comb_fifo_data_3[31:0]
+@200
+-
+@22
+eth_rx_interface.block_type[7:0]
+@28
+eth_rx_interface.sending
+eth_rx_interface.skip_next[1:0]
+@200
+-
+@28
+eth_rx_interface.i_header_valid
+eth_rx_interface.i_header[1:0]
+eth_rx_interface.i_header_valid_q
+eth_rx_interface.i_header_q[1:0]
+[pattern_trace] 1
+[pattern_trace] 0
