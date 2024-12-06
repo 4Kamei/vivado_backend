@@ -68,7 +68,7 @@ module axis_cam #(
     ) (
         input wire          i_clk,
         input wire          i_rst_n,
-    
+
         //This devices assumes that the master interface VALID is always high
         //If this is not the case, plug this into a fifo and route the
         //'halfway-full' signal into i_slave_ready, to make sure the fifo is
@@ -79,21 +79,24 @@ module axis_cam #(
         axis_cam_if.slave   slave_axis
     );
     //axis_cam_if has:      valid, ready, last, id, user, data
-    
+
     localparam int NUM_BUCKETS_LOG2 = $clog2(NUM_BUCKETS);
 
     typedef logic [15:0]                    hash_t;         //If used as addr, can support 64 * 1k rams
     typedef logic [NUM_BUCKETS_LOG2 - 1:0]  mem_addr_t;
     typedef logic [KEY_LENGTH_BYTES * 8 - 1: 0] key_t;
     typedef enum logic [2:0] {
-        PKTTYPE_LOOKUP = 0, 
-        PKTTYPE_UPDATE = 1, 
-        PKTTYPE_LOOKUP_RESPONSE_SUCC = 2,
-        PKTTYPE_LOOKUP_RESPONSE_FAIL = 3,
-        PKTTYPE_EVICTED = 4
+        PKTTYPE_IN_LOOKUP = 0, 
+        PKTTYPE_OUT_LOOKUP_RESPONSE_SUCC = 1,
+        PKTTYPE_OUT_LOOKUP_RESPONSE_FAIL = 2,
+    
+        PKTTYPE_IN_UPDATE = 3, 
+        PKTTYPE_OUT_UPDATE_SUCC = 4,
+        PKTTYPE_OUT_UPDATE_SUCC_WITH_EVICT = 5
+        //And the responses
     } packet_type_t;
-    
-    
+
+
     localparam int NUM_ITEMS_IN_BUCKET_LOG2 = $clog2(ITEMS_IN_BUCKET);
     typedef logic [NUM_ITEMS_IN_BUCKET_LOG2 - 1 : 0]  memory_item_index_t;
     typedef logic [NUM_ITEMS_IN_BUCKET_LOG2 - 1 : 0]  timestamp_t;
@@ -103,13 +106,10 @@ module axis_cam #(
         key_t                                   key;
         logic [DATA_LENGTH_BYTES * 8 - 1:0]     data;
         timestamp_t                             inserted_timestamp;
+        logic                                   is_set;
     } memory_item_t;
 
-    localparam int MEMORY_ITEM_WIDTH = (
-          KEY_LENGTH_BYTES * 8 
-        + DATA_LENGTH_BYTES * 8 
-        + NUM_ITEMS_IN_BUCKET_LOG2
-    );
+    localparam int MEMORY_ITEM_WIDTH= $bits(memory_item_t);
 
     //Each memory row stores a timestamp
     typedef struct packed {
@@ -117,27 +117,52 @@ module axis_cam #(
         memory_item_t [ITEMS_IN_BUCKET-1:0]     items;
     } memory_read_row_t;
 
-    localparam int MEMORY_READ_ROW_WIDTH = 
-        NUM_ITEMS_IN_BUCKET_LOG2
-      + ITEMS_IN_BUCKET * (MEMORY_ITEM_WIDTH);
+    localparam int MEMORY_READ_ROW_WIDTH = $bits(memory_read_row_t);
 
     typedef struct packed {
         logic [KEY_LENGTH_BYTES * 8 - 1:0]  key;    
         logic [DATA_LENGTH_BYTES * 8 - 1:0] data;    
     } axis_data_t;
+    
+    function void print_memory_row(memory_read_row_t row);
+        $display("\ttimestamp:          %h", row.oldest_element_timestamp);
+        $display("\titems    :          %h", ITEMS_IN_BUCKET);
+        for (int i = 0; i < ITEMS_IN_BUCKET; i++) begin
+            if (row.items[i].is_set) begin
+                $display("\titem %d: key        : %h", i, row.items[i].key);    
+                $display("\titem %d: data       : %h", i, row.items[i].data);    
+                $display("\titem %d: inserted   : %h", i, row.items[i].inserted_timestamp);    
+            end else begin
+                $display("\titem %d: key        : <not set>", i);
+                $display("\titem %d: data       : <not set>", i);
+                $display("\titem %d: inserted   : %h <not set>", i, row.items[i].inserted_timestamp);
+            end
+        end
+    endfunction
+
 
     function hash_t hash(input key_t key);
         hash_t output_hash;
         output_hash = 0;
-        for (int i = 0; i < KEY_LENGTH_BYTES; i += 2) begin
-            output_hash = output_hash ^ key[i * 8 +: 16];       //Probably a bad hash function
-        end
+    //for (int i = 0; i < KEY_LENGTH_BYTES; i += 2) begin
+        //    output_hash = output_hash ^ key[i * 8 +: 16];       //Probably a bad hash function
+        //end
+        output_hash = key[15:0];
         return output_hash;
     endfunction 
 
     function memory_item_index_t find_oldest_in_memory(memory_read_row_t row);
+        $display("find oldest in memory: ");
+        print_memory_row(row);
         for (int i = 0; i < ITEMS_IN_BUCKET; i++) begin
-            if (row.items[i].inserted_timestamp == row.oldest_element_timestamp) begin
+            if (!row.items[i].is_set) begin
+                $display("\tFound! => Returning index %d IS UNSET", i);
+                return memory_item_index_t'(i);
+            end
+        end
+        for (int i = 0; i < ITEMS_IN_BUCKET; i++) begin
+            if (row.items[i].inserted_timestamp == row.oldest_element_timestamp || !row.items[i].is_set) begin
+                $display("\tFound! => Returning index %d IS SET", i);
                 return memory_item_index_t'(i);
             end
         end
@@ -151,14 +176,16 @@ module axis_cam #(
         logic               item_found;
         memory_item_index_t index;    
     } memory_item_find_result_t;
-    
+
     function memory_item_find_result_t find_item_in_memory(memory_read_row_t row, key_t item_key);
         memory_item_find_result_t find_result;
+        $display("find item in memory: %h", item_key);
+        print_memory_row(row);
         find_result.item_found = 1'b0;
         find_result.index = memory_item_index_t'(0);
         for (int i = 0; i < ITEMS_IN_BUCKET; i++) begin
             $display("Checking %d against %d at index %d", row.items[i].key, item_key, i);
-            if (row.items[i].key == item_key) begin
+            if (row.items[i].key == item_key && row.items[i].is_set) begin
                 find_result.item_found = 1'b1;
                 find_result.index = memory_item_index_t'(i);
             end
@@ -169,30 +196,36 @@ module axis_cam #(
     function mem_addr_t hash_to_addr(hash_t hash);
         return mem_addr_t'(hash);
     endfunction
-    
+
     function memory_read_row_t replace_in_memory(
-            memory_read_row_t   row, 
-            memory_item_index_t index,
-            axis_data_t         input_data);
+        memory_read_row_t   row, 
+        memory_item_index_t index,
+        logic               should_incr_timestamp,
+        axis_data_t         input_data);
         memory_read_row_t   output_row;
         memory_item_t       new_item;
+        $display("replace in memory    : ");
+        print_memory_row(row);
+        $display("\treplace at:         %h", index);
+        $display("\treplace with:       key=%h data=%h", input_data.key, input_data.data);
+        $display("\tincrement timestamp %h", should_incr_timestamp);
         //Copying the data over
-        output_row.oldest_element_timestamp = row.oldest_element_timestamp + 1'b1;
+        output_row.oldest_element_timestamp = row.oldest_element_timestamp + (should_incr_timestamp ? timestamp_t'(1'b1) : 0);
         output_row.items =  row.items;
-        
         //Create the memory item
         new_item.key = input_data.key;
         new_item.data = input_data.data;
         //We are guaranteed for this to be correct, as the memory on first
         //write is initialized with timestamps 0, 1, 2, ..., ITEMS_IN_BUCKET - 1
         new_item.inserted_timestamp = row.oldest_element_timestamp + timestamp_t'(ITEMS_IN_BUCKET);
-        
+        new_item.is_set = 1'b1;
+
         output_row.items[index] = new_item;
             
         return output_row;
 
     endfunction
-    
+        
     //Not-yet written to rows need to be initialized to this, as we need the
     //item timestamps to be in order. This should be optimised to be just
     //a constant, as the function has no params
@@ -202,6 +235,7 @@ module axis_cam #(
         row.oldest_element_timestamp = 0;
         for (int i = 0; i < ITEMS_IN_BUCKET; i++) begin
             row.items[i].inserted_timestamp = timestamp_t'(i);
+            row.items[i].is_set = 1'b0;
         end
         return row;
     endfunction
@@ -217,7 +251,21 @@ module axis_cam #(
         return output_data;
     endfunction
 
-    assign slave_axis.ready = i_slave_ready; 
+    function logic should_stall_pipeline(
+        hash_t key_hash,
+        hash_t q0_key, packet_type_t q0_type, logic valid_q0,
+        hash_t q1_key, packet_type_t q1_type, logic valid_q1,
+        hash_t q2_key, packet_type_t q2_type, logic valid_q2);
+
+        //Pipeline should stall if we have any update packet that touches the
+        //same memory location as this one
+        return  (hash_to_addr(q0_key) == hash_to_addr(key_hash) && q0_type == PKTTYPE_IN_UPDATE && valid_q0)
+            ||  (hash_to_addr(q1_key) == hash_to_addr(key_hash) && q1_type == PKTTYPE_IN_UPDATE && valid_q1)
+            ||  (hash_to_addr(q2_key) == hash_to_addr(key_hash) && q2_type == PKTTYPE_IN_UPDATE && valid_q2);
+               
+    endfunction
+
+    assign slave_axis.ready = i_slave_ready && ~pipeline_valid_q0_buffered; 
 
     //Attempt to infer logic via synth for BRAMs
     logic [MEMORY_READ_ROW_WIDTH - 1:0] memory [NUM_BUCKETS - 1:0];
@@ -249,36 +297,58 @@ module axis_cam #(
         end
     endgenerate
     
-    logic should_stall_pipeline = should_stall_pipeline(
+    logic pipeline_stall_q0;
+    always_comb pipeline_stall_q0 = should_stall_pipeline(
         hash(slave_axis.data.key),
-        key_hash_q1,    packet_type_q1,     //TODO if we have a memory read AND the key matches, we should stall
-        key_hash_q2,    packet_type_q2,     //
-        key_hash_q3,    packet_type_q3      //
+        key_hash_q0,    packet_type_q0, pipeline_valid_q0,     //TODO if we have a memory read AND the key matches, we should stall
+        key_hash_q1,    packet_type_q1, pipeline_valid_q1,     //
+        key_hash_q2,    packet_type_q2, pipeline_valid_q2      //
     );
-    
-    $error("Implement the stall mechanics, you fuck");
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin : pipeline_q0_reception_b
         if (!i_rst_n) begin
             pipeline_valid_q0 <= 1'b0;
         end else begin
             pipeline_valid_q0 <= 1'b0;
-            if (slave_axis.valid && slave_axis.ready) begin
+            if (pipeline_valid_q0_buffered) begin
+                //We have data that has been buffered due to a previous stall.
+                //Only
+                if (!pipeline_stall_q0) begin
+                    pipeline_valid_q0_buffered <= 1'b0;
+                    pipeline_valid_q0 <= 1'b1;
+                    key_hash_q0 <= key_hash_q0_buffered;
+                    data_item_q0 <= data_item_q0_buffered;
+                    packet_type_q0 <= packet_type_q0_buffered;
+                    axis_id_q0 <= axis_id_q0_buffered;
+                end
+            end
+            
+            if (slave_axis.valid && (slave_axis.ready || pipeline_valid_q0_buffered && !pipeline_stall_q0)) begin
                 $display("Got packet: ready = %h", slave_axis.ready);
-                $display("Got packet: valid = %h", slave_axis.valid);
-                $display("Got packet: last  = %h", slave_axis.last);
-                $display("Got packet: data  = %h", slave_axis.data);
-                $display("Got packet: id    = %h", slave_axis.id);
-                $display("Got packet: user  = %h", slave_axis.user);
-                $display("Got packet: hash  = %h", hash(slave_axis.data.key));
+                $display("            valid = %h", slave_axis.valid);
+                $display("            last  = %h", slave_axis.last);
+                $display("            data  = %h", slave_axis.data);
+                $display("            id    = %h", slave_axis.id);
+                $display("            user  = %h", slave_axis.user);
+                $display("            hash  = %h", hash(slave_axis.data.key));
+                $display("Should stall?     = %h", pipeline_stall_q0);
                 case (slave_axis.user)
-                    PKTTYPE_LOOKUP, PKTTYPE_UPDATE: begin : packet_lookup_b
-                        pipeline_valid_q0 <= 1'b1;
-                        key_hash_q0 <= hash(slave_axis.data.key);
-                        //$display("Next key_hash_q0 is $h", hash(slave_axis.data.key));
-                        data_item_q0 <= slave_axis.data;
-                        axis_id_q0 <= slave_axis.id;
-                        packet_type_q0 <= packet_type_t'(slave_axis.user);
+                    PKTTYPE_IN_LOOKUP, PKTTYPE_IN_UPDATE: begin : packet_lookup_b
+                        if (pipeline_stall_q0) begin
+                            pipeline_valid_q0_buffered <= 1'b1;
+                            key_hash_q0_buffered <= hash(slave_axis.data.key);
+                            //$display("Next key_hash_q0 is $h", hash(slave_axis.data.key));
+                            data_item_q0_buffered <= slave_axis.data;
+                            axis_id_q0_buffered <= slave_axis.id;
+                            packet_type_q0_buffered <= packet_type_t'(slave_axis.user);
+                        end else begin
+                            pipeline_valid_q0 <= 1'b1;
+                            key_hash_q0 <= hash(slave_axis.data.key);
+                            //$display("Next key_hash_q0 is $h", hash(slave_axis.data.key));
+                            data_item_q0 <= slave_axis.data;
+                            axis_id_q0 <= slave_axis.id;
+                            packet_type_q0 <= packet_type_t'(slave_axis.user);
+                        end
                     end
                     default: $error("Incorrect packet type");
                 endcase
@@ -361,7 +431,7 @@ module axis_cam #(
                 key_hash_q2 <= key_hash_q1;
                 data_item_q2 <= data_item_q1;
                 packet_type_q2 <= packet_type_q1;
-                memory_read_q2 <= memory_read_q1;
+                memory_read_q2 <= memory_read_or_init_q2_comb;
                 axis_id_q2 <= axis_id_q1;
                 
                 //Pipeline computations
@@ -387,15 +457,8 @@ module axis_cam #(
     memory_item_index_t         oldest_item_index_q3;
 
     memory_item_find_result_t   item_find_result_q3;
-    axis_id_t                   axis_id_q3;
-    
-    //
-    memory_read_row_t           memory_write_data_q3_comb;
-    always_comb memory_write_data_q3_comb = replace_in_memory(
-        memory_location_initalized[hash_to_addr(key_hash_q2)] ? memory_read_q2 : get_init_row(), 
-        item_find_result_q2.item_found ? item_find_result_q2.index : oldest_item_index_q2, 
-        data_item_q2);
-    
+    axis_id_t                   axis_id_q3; 
+ 
     always_ff @(posedge i_clk or negedge i_rst_n) begin : pipeline_q3_lookup_b
         if (!i_rst_n) begin
             pipeline_valid_q3 <= 1'b0;
@@ -407,21 +470,24 @@ module axis_cam #(
                 data_item_q3 <= data_item_q2;
                 packet_type_q3 <= packet_type_q2;
                 axis_id_q3 <= axis_id_q2;
+                oldest_item_index_q3 <= oldest_item_index_q2;
 
                 memory_read_q3 <= memory_read_q2;
                 item_find_result_q3 <= item_find_result_q2;
-
-                //Pipeline computation8'h6, 1'b1, 32'hC001_0FAB
-                //TODO something, idk what
             end
         end
     end
 
     //Do the memory write
     always_ff @(posedge i_clk) begin : memory_write_b
-        if (pipeline_valid_q2 && packet_type_q2 == PKTTYPE_UPDATE) begin
+        if (pipeline_valid_q2 && packet_type_q2 == PKTTYPE_IN_UPDATE) begin
             memory_location_initalized[hash_to_addr(key_hash_q2)] <= 1'b1;
-            memory[hash_to_addr(key_hash_q2)] <= memory_write_data_q3_comb;
+            memory[hash_to_addr(key_hash_q2)] <= replace_in_memory(
+                memory_location_initalized[hash_to_addr(key_hash_q2)] ? memory_read_q2 : get_init_row(), 
+                item_find_result_q2.item_found ? item_find_result_q2.index : oldest_item_index_q2,
+                ~item_find_result_q2.item_found,
+                data_item_q2
+            );
         end
     end
 
@@ -442,20 +508,32 @@ module axis_cam #(
             if (pipeline_valid_q3) begin
                 reply_id_q4 <= axis_id_q3;
                 case (packet_type_q3)
-                    PKTTYPE_LOOKUP: begin
+                    PKTTYPE_IN_LOOKUP: begin
                         if (item_find_result_q3.item_found) begin
-                            reply_packet_q4 <= PKTTYPE_LOOKUP_RESPONSE_SUCC;
+                            reply_packet_q4 <= PKTTYPE_OUT_LOOKUP_RESPONSE_SUCC;
                             output_data_q4 <= create_output_data(
                                 memory_read_q3.items[item_find_result_q3.index]
                             );
                         end else begin
-                            reply_packet_q4 <= PKTTYPE_LOOKUP_RESPONSE_FAIL;
+                            reply_packet_q4 <= PKTTYPE_OUT_LOOKUP_RESPONSE_FAIL;
                             output_data_q4 <= data_item_q3;
                         end
                     end
-                    PKTTYPE_UPDATE: begin
-                        response_ready_q4 <= 1'b0;
-                        //TODO need to write 'evicted' packet
+                    PKTTYPE_IN_UPDATE: begin
+                        if (item_find_result_q3.item_found) begin
+                            reply_packet_q4 <= PKTTYPE_OUT_UPDATE_SUCC_WITH_EVICT;
+                            output_data_q4 <= create_output_data(
+                                memory_read_q3.items[item_find_result_q3.index]
+                            );
+                        end else if (memory_read_q3.items[oldest_item_index_q3].is_set) begin
+                            reply_packet_q4 <= PKTTYPE_OUT_UPDATE_SUCC_WITH_EVICT;
+                            output_data_q4 <= create_output_data(
+                                memory_read_q3.items[oldest_item_index_q3]
+                            );
+                        end else begin
+                            reply_packet_q4 <= PKTTYPE_OUT_UPDATE_SUCC;
+                            output_data_q4 <= data_item_q3;
+                        end
                     end
                     default: $error("Unhandled packet type $s", packet_type_q3);
                 endcase
