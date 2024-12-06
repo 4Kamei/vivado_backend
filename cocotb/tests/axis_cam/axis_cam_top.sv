@@ -6,7 +6,9 @@
 //support interfaces at top level
 module axis_cam_top #(
         parameter int DATA_WIDTH_BYTES = 1,
-        parameter int KEY_WIDTH_BYTES = 6
+        parameter int KEY_WIDTH_BYTES = 6,
+        parameter int NUM_BUCKETS = 8 ,
+        parameter int NUM_ITEMS_IN_BUCKET = 4
     ) (
         input   wire                            i_clk,
         input   wire                            i_rst_n,
@@ -59,7 +61,10 @@ module axis_cam_top #(
     assign o_m_tid = output_if.id;
     assign o_m_tlast = output_if.last;
 
-    axis_cam #() axis_cam_u (
+    axis_cam #(
+        .NUM_BUCKETS(NUM_BUCKETS),
+        .ITEMS_IN_BUCKET(NUM_ITEMS_IN_BUCKET)
+    ) axis_cam_u (
         .i_clk(i_clk),
         .i_rst_n(i_rst_n),
         .i_slave_ready(1'b1),

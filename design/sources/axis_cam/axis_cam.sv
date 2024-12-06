@@ -81,6 +81,7 @@ module axis_cam #(
     //axis_cam_if has:      valid, ready, last, id, user, data
 
     localparam int NUM_BUCKETS_LOG2 = $clog2(NUM_BUCKETS);
+    localparam int NEW_ITEM_TIMESTAMP = ITEMS_IN_BUCKET - 1;
 
     typedef logic [15:0]                    hash_t;         //If used as addr, can support 64 * 1k rams
     typedef logic [NUM_BUCKETS_LOG2 - 1:0]  mem_addr_t;
@@ -204,24 +205,37 @@ module axis_cam #(
         axis_data_t         input_data);
         memory_read_row_t   output_row;
         memory_item_t       new_item;
+        timestamp_t         replaced_item_timestamp;
+
         $display("replace in memory    : ");
         print_memory_row(row);
         $display("\treplace at:         %h", index);
         $display("\treplace with:       key=%h data=%h", input_data.key, input_data.data);
         $display("\tincrement timestamp %h", should_incr_timestamp);
         //Copying the data over
-        output_row.oldest_element_timestamp = row.oldest_element_timestamp + (should_incr_timestamp ? timestamp_t'(1'b1) : 0);
+        replaced_item_timestamp = row.items[index].inserted_timestamp;
+        
+        output_row.oldest_element_timestamp = 0;
+        
         output_row.items =  row.items;
+
         //Create the memory item
         new_item.key = input_data.key;
         new_item.data = input_data.data;
         //We are guaranteed for this to be correct, as the memory on first
         //write is initialized with timestamps 0, 1, 2, ..., ITEMS_IN_BUCKET - 1
-        new_item.inserted_timestamp = row.oldest_element_timestamp + timestamp_t'(ITEMS_IN_BUCKET);
+        new_item.inserted_timestamp = timestamp_t'(NEW_ITEM_TIMESTAMP);
         new_item.is_set = 1'b1;
 
+        for (int i = 0; i < ITEMS_IN_BUCKET; i++) begin
+            if (output_row.items[i].inserted_timestamp > replaced_item_timestamp) begin
+                $display("\t\tDecrementing item at %d from %d", i, output_row.items[i].inserted_timestamp);
+                output_row.items[i].inserted_timestamp = output_row.items[i].inserted_timestamp - 1'b1;
+            end
+        end
+
         output_row.items[index] = new_item;
-            
+
         return output_row;
 
     endfunction
