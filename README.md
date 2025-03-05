@@ -4,7 +4,11 @@
 
 ## Projects list (For the Alinx AX7325 board)
 
-Currently in active development is eth_10g_pkt_receive.
+Currently in active development is eth_10g_pkt_receive. 
+
+ * Currently implemented is packet receive on one channel. 
+
+ * CAM for storing routing information written and tested, but not integrated.
     
 ## Directory Structure
 
