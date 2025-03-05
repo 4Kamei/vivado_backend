@@ -1,0 +1,145 @@
+[*]
+[*] GTKWave Analyzer v3.3.118 (w)1999-2023 BSI
+[*] Wed Oct 16 21:49:33 2024
+[*]
+[dumpfile] "/home/kamei/projects/fpga_projects/vivado_backend/cocotb/tests/lfsr_1bit/dump.vcd"
+[dumpfile_mtime] "Wed Oct 16 16:11:00 2024"
+[dumpfile_size] 6459
+[savefile] "/home/kamei/projects/fpga_projects/vivado_backend/cocotb/tests/lfsr_1bit/view.gtkw"
+[timestart] 0
+[size] 1920 1080
+[pos] -1921 -1
+*-13.500000 41306 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 297
+[signals_width] 230
+[sst_expanded] 1
+[sst_vpaned_height] 324
+@28
+lfsr_1bit.i_clk
+lfsr_1bit.i_rst_n
+@200
+-
+@28
+lfsr_1bit.i_bit
+lfsr_1bit.i_bit_en
+@200
+-
+@201
+-
+@800022
+lfsr_1bit.state[31:0]
+@28
+[color] 2
+(0)lfsr_1bit.state[31:0]
+[color] 2
+(1)lfsr_1bit.state[31:0]
+[color] 2
+(2)lfsr_1bit.state[31:0]
+[color] 2
+(3)lfsr_1bit.state[31:0]
+[color] 2
+(4)lfsr_1bit.state[31:0]
+[color] 2
+(5)lfsr_1bit.state[31:0]
+[color] 2
+(6)lfsr_1bit.state[31:0]
+[color] 2
+(7)lfsr_1bit.state[31:0]
+[color] 2
+(8)lfsr_1bit.state[31:0]
+[color] 2
+(9)lfsr_1bit.state[31:0]
+[color] 2
+(10)lfsr_1bit.state[31:0]
+[color] 2
+(11)lfsr_1bit.state[31:0]
+[color] 2
+(12)lfsr_1bit.state[31:0]
+[color] 2
+(13)lfsr_1bit.state[31:0]
+[color] 2
+(14)lfsr_1bit.state[31:0]
+[color] 2
+(15)lfsr_1bit.state[31:0]
+[color] 2
+(16)lfsr_1bit.state[31:0]
+[color] 2
+(17)lfsr_1bit.state[31:0]
+[color] 2
+(18)lfsr_1bit.state[31:0]
+[color] 2
+(19)lfsr_1bit.state[31:0]
+[color] 2
+(20)lfsr_1bit.state[31:0]
+[color] 2
+(21)lfsr_1bit.state[31:0]
+[color] 2
+(22)lfsr_1bit.state[31:0]
+[color] 2
+(23)lfsr_1bit.state[31:0]
+[color] 2
+(24)lfsr_1bit.state[31:0]
+[color] 2
+(25)lfsr_1bit.state[31:0]
+[color] 2
+(26)lfsr_1bit.state[31:0]
+[color] 2
+(27)lfsr_1bit.state[31:0]
+[color] 2
+(28)lfsr_1bit.state[31:0]
+[color] 2
+(29)lfsr_1bit.state[31:0]
+[color] 2
+(30)lfsr_1bit.state[31:0]
+[color] 2
+(31)lfsr_1bit.state[31:0]
+@200
+-
+-
+@1001200
+-group_end
+@22
+lfsr_1bit.POLYNOMIAL[31:0]
+@200
+-
+@c00022
+lfsr_1bit.o_state[31:0]
+@28
+(0)lfsr_1bit.o_state[31:0]
+(1)lfsr_1bit.o_state[31:0]
+(2)lfsr_1bit.o_state[31:0]
+(3)lfsr_1bit.o_state[31:0]
+(4)lfsr_1bit.o_state[31:0]
+(5)lfsr_1bit.o_state[31:0]
+(6)lfsr_1bit.o_state[31:0]
+(7)lfsr_1bit.o_state[31:0]
+(8)lfsr_1bit.o_state[31:0]
+(9)lfsr_1bit.o_state[31:0]
+(10)lfsr_1bit.o_state[31:0]
+(11)lfsr_1bit.o_state[31:0]
+(12)lfsr_1bit.o_state[31:0]
+(13)lfsr_1bit.o_state[31:0]
+(14)lfsr_1bit.o_state[31:0]
+(15)lfsr_1bit.o_state[31:0]
+(16)lfsr_1bit.o_state[31:0]
+(17)lfsr_1bit.o_state[31:0]
+(18)lfsr_1bit.o_state[31:0]
+(19)lfsr_1bit.o_state[31:0]
+(20)lfsr_1bit.o_state[31:0]
+(21)lfsr_1bit.o_state[31:0]
+(22)lfsr_1bit.o_state[31:0]
+(23)lfsr_1bit.o_state[31:0]
+(24)lfsr_1bit.o_state[31:0]
+(25)lfsr_1bit.o_state[31:0]
+(26)lfsr_1bit.o_state[31:0]
+(27)lfsr_1bit.o_state[31:0]
+(28)lfsr_1bit.o_state[31:0]
+(29)lfsr_1bit.o_state[31:0]
+(30)lfsr_1bit.o_state[31:0]
+(31)lfsr_1bit.o_state[31:0]
+@1401200
+-group_end
+@28
+lfsr_1bit.top_bit
+[pattern_trace] 1
+[pattern_trace] 0
