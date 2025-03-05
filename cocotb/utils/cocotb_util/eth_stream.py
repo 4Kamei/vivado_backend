@@ -87,9 +87,13 @@ class EthStreamSink:
             if self.currently_receiving == None:
                 if int(self.bus["valid"].value) == 1:
                     self.currently_receiving = DataQueue()
+                assert int(self.bus["abort"]) == 0, f"Can't be valid AND aborted at start of packet"
+                self.is_aborted = False
+
             if self.currently_receiving != None:
                 if int(self.bus["valid"].value) == 0:
                     continue
+                self.is_aborted = self.is_aborted or int(self.bus["abort"]) == 1
                 keep = int(self.bus["keep"].value)+ 1
                 last = int(self.bus["last"].value)
                 input_data = int(self.bus["data"].value).to_bytes(4, byteorder="little", signed=False)
@@ -99,9 +103,19 @@ class EthStreamSink:
                     assert last == 1, "Sent less than bus_width of bytes, last wasn't asserted"
                 if last == 1:
                     self.logger.info(f"Received packet with length {self.currently_receiving.size()}")
-                    self.data.put(self.currently_receiving.get(self.currently_receiving.size()))
+                    if not self.is_aborted:
+                        self.data.put(self.currently_receiving.get(self.currently_receiving.size()))
                     self.currently_receiving = None
-                    
+
+    def empty(self):
+        return self.currently_receiving == None and self.data.size() == 0
+
+    async def wait_idle(self):
+        while True:
+            await RisingEdge(self.clock)
+            if self.currently_receiving == None:
+                return
+
     async def recv(self, timeout=None):
         counter = 0
         while self.data.size() == 0:

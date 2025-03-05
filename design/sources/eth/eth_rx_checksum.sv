@@ -39,11 +39,12 @@ module eth_rx_checksum #(
     assign o_eths_master_last = last;
 
     //*CRC is the last 32 bits of the packet*
+    
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) begin
            valid <= 1'b0;
-           abort <= 1'b0;
+           abort <= 1'b1;
            last <= 1'b0;
         end else begin
             data <= i_eths_slave_data;

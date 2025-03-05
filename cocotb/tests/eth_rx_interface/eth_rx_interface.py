@@ -117,6 +117,7 @@ async def can_receive_blocks_specific(dut):
             for signal in signal_row:
                 signals[signal].value = signal_row[signal]
             
+        print(await stream_sink.recv())
 
 @cocotb.test()
 async def can_receive_blocks_rand(dut):
