@@ -64,31 +64,6 @@ proc batch_insert_ila { depth } {
         # Now we search for the local clock net associated with the target net.  There may be ambiguities or no answer in some cases
         if {![info exists clocks($name)]} {
             # does MARK_DEBUG_CLOCK decorate this net?   If not, then search backwards to the driver cell
-set PROJ_ROOT $env(PROJ_ROOT)
-set PROJ_NAME "uart_fpga_loopback"
-set CONSTRAINTS_DIR ${PROJ_ROOT}/design/projects/
-set SOURCES_DIR ${PROJ_ROOT}/design/sources/
-set TARGET_PART xc7k325tffg900-1
-set REPORT_DIR "reports"
-
-#Source the scripts
-source ${PROJ_ROOT}/scripts/vivado.tcl
-
-#FIXME make this pick up existing projects? or something?
-#Set if was 'gui' or not?
-create_project -part $TARGET_PART -force -in_memory -verbose $PROJ_NAME .
-
-set_property target_language Verilog [current_project]
-
-read_verilog [ rglob ${PROJ_ROOT}/design/sources *.sv] -sv -verbose
-read_verilog [ rglob ${PROJ_ROOT}/design/projects/ *.sv] -sv -verbose
-
-#Constraints with '.tcl' are unmanaged and what we want, '.xdc' are managed by the tool
-#allowing only a subset of tcl syntax
-read_xdc [ rglob ${CONSTRAINTS_DIR} *.tcl ] -unmanaged -verbose
-
-
-synth_design -top $PROJ_NAME -part $TARGET_PART
             set clk_name [get_property -quiet MARK_DEBUG_CLOCK $d]
             if {  [llength $clk_name] == 0 } {
                 # trace to the clock net, tracing backwards via the driver pin.
